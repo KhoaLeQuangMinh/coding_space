@@ -1,5 +1,5 @@
 data:
-  root: /kaggle/input/your-alzheimer-dataset
+  root: /kaggle/input/datasets/kisokoghan/paired-npz/paired_npz
 
 training:
   batch_size: 4

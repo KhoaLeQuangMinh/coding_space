@@ -57,6 +57,9 @@ class MRIPETDataset(Dataset):
         mri_volume = resize_volume(mri_volume, TARGET_SHAPE)
         pet_volume = resize_volume(pet_volume, TARGET_SHAPE)
 
+        mri_volume = np.expand_dims(mri_volume.astype(np.float32), axis=0)
+        pet_volume = np.expand_dims(pet_volume.astype(np.float32), axis=0)
+
         label = LABEL_MAP[string_label]
 
         if self.mri_transform:

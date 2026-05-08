@@ -1,0 +1,11 @@
+data:
+  root: /kaggle/input/your-alzheimer-dataset
+
+training:
+  batch_size: 4
+  num_workers: 4
+
+split:
+  train_ratio: 0.7
+  val_ratio: 0.1
+  test_ratio: 0.2

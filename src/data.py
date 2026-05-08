@@ -29,7 +29,7 @@ def resize_volume(volume: np.ndarray, target_shape=TARGET_SHAPE) -> np.ndarray:
     """
     current_shape = np.array(volume.shape, dtype=float)
     zoom_factors = np.array(target_shape, dtype=float) / current_shape
-    resized = zoom(volume, zoom=zoom_factors, order=3, prefilter=True)
+    resized = zoom(volume, zoom=zoom_factors, order=1, prefilter=True)
     return resized.astype(np.float32)
 
 class MRIPETDataset(Dataset):

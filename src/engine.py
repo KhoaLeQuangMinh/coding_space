@@ -28,7 +28,9 @@ def train_end_to_end(
 
     model = BaselineModel(
         class_num=config["model"]["num_classes"],
-        fusion_method=config["model"]["fusion_type"]
+        fusion_method=config["model"]["fusion_type"],
+        pretrained=config["model"]["pretrained"],
+        pretrained_path=config["model"]["pretrained_path"]
     ).to(device)
 
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)

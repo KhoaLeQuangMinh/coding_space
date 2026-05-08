@@ -1,5 +1,5 @@
 experiment:
-  name: mri_pet_baseline
+  name: mri_pet_baseline_pretrained
 
 data:
   batch_size: 4
@@ -14,8 +14,8 @@ model:
     - EMCI
     - LMCI
     - AD
-  pretrained: false
-  pretrained_path: null
+  pretrained: true
+  pretrained_path: /kaggle/input/models/khoale05/vit-pretrained-75-mask-ratio/pytorch/default/1/ViT_B_pretrained_noaug_mae75_BRATS2023_IXI_OASIS3_seed_8456_999_077000.pth.tar
 
 training:
   device: cuda:0

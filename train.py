@@ -14,7 +14,7 @@ from src.engine import test_model
 
 
 config = read_config("configs/kaggle.yaml")
-config_experiment = read_config("configs/baseline.yaml")
+config_experiment = read_config("configs/baseline_pretrained.yaml")
 dataset = MRIPETDataset(root=config["data"]["root"])
 generator = torch.Generator().manual_seed(12345)
 

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from vit3d import vit_b16_backbone 
+from src.vit3d import vit_b16_backbone 
 from src.fusion_modules import ConcatFusion, SumFusion, FiLM, GatedFusion, CrossAttention, ClinicalGuideCrossAttention
 
 def create_vit_backbone(pretrained=False, pretrained_path=None):

@@ -46,3 +46,67 @@ def create_experiment_logger(experiment_name):
         ])
 
     return file, writer
+
+def print_experiment_config(config):
+
+    print("\n" + "=" * 60)
+
+    print(
+        f"Experiment: "
+        f"{config['experiment']['name']}"
+    )
+
+    print("-" * 60)
+
+    print(
+        f"Model: "
+        f"{config['model']['fusion_type']}"
+    )
+
+    print(
+        f"Classes: "
+        f"{config['model']['num_classes']}"
+    )
+
+    print("-" * 60)
+
+    print(
+        f"Device: "
+        f"{config['training']['device']}"
+    )
+
+    print(
+        f"Epochs: "
+        f"{config['training']['epochs']}"
+    )
+
+    print("-" * 60)
+
+    print(
+        f"Learning Rate: "
+        f"{config['optimizer']['lr']}"
+    )
+
+    print(
+        f"Weight Decay: "
+        f"{config['optimizer']['weight_decay']}"
+    )
+
+    print(
+        f"Momentum: "
+        f"{config['optimizer']['momentum']}"
+    )
+
+    print("-" * 60)
+
+    print(
+        f"Scheduler T0: "
+        f"{config['scheduler']['T_0']}"
+    )
+
+    print(
+        f"Scheduler T_mult: "
+        f"{config['scheduler']['T_mult']}"
+    )
+
+    print("=" * 60 + "\n")

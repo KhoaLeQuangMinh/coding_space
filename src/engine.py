@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 from src.baseline_model import BaselineModel
-from src.utils import create_experiment_logger
+from src.utils import create_experiment_logger, print_experiment_config
 
 def train_end_to_end(
     train_dataloader,
@@ -50,7 +50,7 @@ def train_end_to_end(
     epochs = config["training"]["epochs"]
 
     best_f1 = 0.0
-
+    print_experiment_config(config)
     print(f"Using device: {device}")
 
     for epoch in range(epochs):

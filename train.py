@@ -2,12 +2,10 @@ from src.data import MRIPETDataset
 from torch.utils.data import DataLoader
 import torch
 from torch.utils.data import DataLoader, random_split
-import yaml
+from src.utils import read_config
 
-with open("configs/kaggle.yaml", "r") as f:
-    config = yaml.safe_load(f)
+config = read_config("configs/kaggle.yaml")
 
-print(config)
 dataset = MRIPETDataset(root=config["data"]["root"])
 
 # 1. Define your split sizes (e.g., 70% train, 10% val, 20% test)

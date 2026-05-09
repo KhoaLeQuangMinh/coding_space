@@ -1,0 +1,33 @@
+experiment:
+  name: mri_pet_bl_pt_film
+
+data:
+  batch_size: 4
+  num_workers: 4
+
+model:
+  num_classes: 4
+  fusion_type: film
+
+  class_names:
+    - CN
+    - EMCI
+    - LMCI
+    - AD
+  pretrained: true
+  pretrained_path: /kaggle/input/models/khoale05/vit-pretrained-75-mask-ratio/pytorch/default/1/ViT_B_pretrained_noaug_mae75_BRATS2023_IXI_OASIS3_seed_8456_999_077000.pth.tar
+
+training:
+  device: cuda:0
+  epochs: 40
+
+optimizer:
+  lr: 0.001
+  weight_decay: 0.001
+  momentum: 0.9
+
+scheduler:
+  T_0: 10
+  T_mult: 3
+  eta_min: 0.00001
+

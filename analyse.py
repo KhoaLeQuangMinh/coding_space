@@ -1290,11 +1290,16 @@ def main():
             f"Weights not found: {model_path}\n"
             f"Train first: python train.py --config {args.config}"
         )
-
-    model = BaselineModel(
-        class_num=config_exp["model"]["num_classes"],
-        fusion_method=config_exp["model"]["fusion_type"],
-    ).to(device)
+    if config_exp["training"]["use_mse"] == True:
+        model = BaselineModel(
+            class_num = 1,
+            fusion_method=config_exp["model"]["fusion_type"],
+        ).to(device)
+    else:
+        model = BaselineModel(
+            class_num=config_exp["model"]["num_classes"],
+            fusion_method=config_exp["model"]["fusion_type"],
+        ).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     print(f"  Loaded weights: {model_path}\n")
 

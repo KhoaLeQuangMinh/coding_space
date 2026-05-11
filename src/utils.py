@@ -1,6 +1,9 @@
 import yaml
 import os
 import csv
+import random
+import numpy as np
+import torch
 
 def read_config(config_path):
     with open(config_path, "r") as f:
@@ -110,3 +113,46 @@ def print_experiment_config(config):
     )
 
     print("=" * 60 + "\n")
+
+
+def set_global_seed(seed: int = 42, deterministic: bool = True):
+    """
+    Make training as reproducible as possible.
+    """
+
+    # Python
+    random.seed(seed)
+
+    # Numpy
+    np.random.seed(seed)
+
+    # Torch CPU
+    torch.manual_seed(seed)
+
+    # Torch CUDA
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    # Hash seed
+    os.environ["PYTHONHASHSEED"] = str(seed)
+
+    if deterministic:
+
+        # CuBLAS reproducibility
+        os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+
+        # CuDNN
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+        # Force deterministic algorithms
+        torch.use_deterministic_algorithms(True)
+
+    else:
+        torch.backends.cudnn.benchmark = True
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+
+    random.seed(worker_seed)
+    np.random.seed(worker_seed)

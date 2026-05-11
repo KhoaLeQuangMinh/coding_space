@@ -1,10 +1,12 @@
 import argparse
+from logging import config
 import torch
 from torch.utils.data import DataLoader, random_split
 
 from src.data import MRIPETDataset
 from src.utils import read_config
 from src.engine import train_end_to_end, test_model
+from src.utils import set_global_seed, seed_worker
 
 
 def parse_args():
@@ -21,6 +23,8 @@ def parse_args():
 
 
 def main():
+    SEED = 12345
+    set_global_seed(SEED)
 
     args = parse_args()
 
@@ -56,25 +60,34 @@ def main():
         generator=generator
     )
 
+    g = torch.Generator()
+    g.manual_seed(SEED)
+
     train_loader = DataLoader(
         train_ds,
         batch_size=config["training"]["batch_size"],
         shuffle=True,
-        num_workers=config["training"]["num_workers"]
+        num_workers=config["training"]["num_workers"],
+        worker_init_fn=seed_worker,
+        generator=g
     )
 
     val_loader = DataLoader(
         val_ds,
         batch_size=config["training"]["batch_size"],
         shuffle=False,
-        num_workers=config["training"]["num_workers"]
+        num_workers=config["training"]["num_workers"],
+        worker_init_fn=seed_worker,
+        generator=g
     )
 
     test_loader = DataLoader(
         test_ds,
         batch_size=config["training"]["batch_size"],
         shuffle=False,
-        num_workers=config["training"]["num_workers"]
+        num_workers=config["training"]["num_workers"],
+        worker_init_fn=seed_worker,
+        generator=g
     )
 
     print(

@@ -16,8 +16,8 @@ What this script does
 4.  Saves all plots + a subject-ID error log to
       outputs/analysis/<experiment_name>/
 
-Outputs
--------
+Outputs — CrossEntropy mode  (use_mse: false in yaml)
+------------------------------------------------------
   confusion_matrix.png              Raw + normalised confusion matrix
   per_class_metrics.png             Precision / Recall / F1 per class
   confidence_distribution.png       Softmax confidence histograms per class
@@ -30,6 +30,16 @@ Outputs
   confused_ad_as_pmci_MRI/PET.png   AD predicted as pMCI  vs  AD correct
   error_subjects.json               Subject IDs for every error bucket
   summary_report.txt                Plain-text metric summary
+
+Outputs — MSE mode  (use_mse: true in yaml)
+--------------------------------------------
+  Same files as above EXCEPT:
+    confidence_distribution.png  →  mse_residual_distribution.png
+                                     (regression residual histograms instead of
+                                      softmax confidence; no calibration plot)
+    calibration.png              →  mse_regression_scatter.png
+                                     (predicted scalar vs true label scatter)
+  All scan panels and subject ID logs are identical between modes.
 """
 
 import argparse
@@ -112,29 +122,49 @@ def _savefig(fig, path):
 
 
 # ══════════════════════════════════════════════
-# 1.  Inference
+# 1.  Inference  (CrossEntropy and MSE modes)
 # ══════════════════════════════════════════════
-def run_inference(model, loader, device):
+def run_inference(model, loader, device, use_mse=False, num_classes=4):
     """
-    Run the model on a DataLoader and collect predictions, probabilities,
-    ground-truth labels, subject IDs, and raw MRI/PET tensors for a
-    representative subset of samples.
+    Run the model on a DataLoader and collect everything needed for analysis.
+
+    Handles two output shapes transparently:
+
+    CrossEntropy mode  (use_mse=False)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Model output : (B, C)  logits over C classes.
+    Decoded via  : argmax of softmax probabilities.
+    Extra data   : probs  — (N, C) softmax array used for confidence
+                   plots and calibration.  The "conf" stored per bucket
+                   entry is the softmax score of the predicted class.
+
+    MSE mode  (use_mse=True)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+    Model output : (B, 1)  a single continuous scalar per sample.
+    Decoded via  : round to nearest integer, clamp to [0, num_classes-1].
+                   This mirrors the decoding used during training in
+                   train_end_to_end_mse().
+    Extra data   : raw_scores — (N,) float array of the unrounded scalars.
+                   These replace "probs" for MSE-specific plots.  The
+                   "conf" stored per bucket entry is the absolute
+                   residual (|raw_score - true_label|) negated so that
+                   lower residual = higher "confidence" for display purposes.
 
     Returns
     -------
-    labels   : np.ndarray (N,)        integer class indices
-    preds    : np.ndarray (N,)        predicted class indices
-    probs    : np.ndarray (N, C)      softmax probabilities
-    subjects : list                   subject IDs from the dataset
-    buckets  : dict                   (true_cls, pred_cls) -> list of
-                                      {"mri", "pet", "subject_id", "conf"}
-                                      capped at MAX_STORE per bucket so RAM
-                                      usage stays bounded even on large datasets
+    labels      : np.ndarray (N,)         integer class indices (ground truth)
+    preds       : np.ndarray (N,)         integer predicted class indices
+    scores      : np.ndarray              (N, C) softmax probs  [CE mode]
+                                          (N,)   raw scalars    [MSE mode]
+    subjects    : list                    subject IDs from the dataset
+    buckets     : dict                    (true_cls, pred_cls) -> list of
+                                          {"mri", "pet", "subject_id", "conf"}
+                                          capped at MAX_STORE per bucket
     """
-    MAX_STORE = 6     # max volumes kept per (true, pred) bucket for scan panels
+    MAX_STORE = 6
 
     model.eval()
-    all_preds, all_labels, all_probs, all_subjects = [], [], [], []
+    all_preds, all_labels, all_scores, all_subjects = [], [], [], []
     buckets = {}
 
     with torch.no_grad():
@@ -145,8 +175,16 @@ def run_inference(model, loader, device):
             sids   = batch["subject_id"]
 
             logits = model(mri, pet)
-            probs  = F.softmax(logits, dim=1).cpu()
-            preds  = probs.argmax(dim=1)
+
+            if use_mse:
+                # (B, 1) -> (B,) scalar
+                raw = logits.squeeze(1).cpu()
+                preds = raw.round().long().clamp(0, num_classes - 1)
+                batch_scores = raw  # store raw floats for MSE plots
+            else:
+                probs = F.softmax(logits, dim=1).cpu()
+                preds = probs.argmax(dim=1)
+                batch_scores = probs
 
             for i in range(len(labels)):
                 t   = int(labels[i])
@@ -156,8 +194,16 @@ def run_inference(model, loader, device):
 
                 all_preds.append(p)
                 all_labels.append(t)
-                all_probs.append(probs[i].numpy())
                 all_subjects.append(sid)
+
+                if use_mse:
+                    all_scores.append(float(batch_scores[i]))
+                    # "conf" = closeness to true label  (0 = perfect, higher = worse)
+                    residual = abs(float(batch_scores[i]) - t)
+                    conf_val = max(0.0, 1.0 - residual / (num_classes - 1))
+                else:
+                    all_scores.append(batch_scores[i].numpy())
+                    conf_val = float(batch_scores[i, p])
 
                 if key not in buckets:
                     buckets[key] = []
@@ -166,13 +212,14 @@ def run_inference(model, loader, device):
                         "mri":        mri[i].cpu(),
                         "pet":        pet[i].cpu(),
                         "subject_id": sid,
-                        "conf":       float(probs[i, p]),
+                        "conf":       conf_val,
                     })
 
+    scores_arr = np.array(all_scores)   # (N,) for MSE, (N,C) for CE
     return (
         np.array(all_labels),
         np.array(all_preds),
-        np.array(all_probs),
+        scores_arr,
         all_subjects,
         buckets,
     )
@@ -896,9 +943,223 @@ def plot_confused_pairs(buckets, save_dir, max_samples=3):
 
 
 # ══════════════════════════════════════════════
+# 11a.  MSE — residual distribution  (replaces confidence_distribution)
+# ══════════════════════════════════════════════
+def plot_mse_residual_distribution(labels, preds, raw_scores, save_path):
+    """
+    For each true class, histogram the regression residual
+    (predicted_scalar - true_label), split by whether the rounded
+    prediction was correct or wrong.
+
+    What is "residual" here?
+    ~~~~~~~~~~~~~~~~~~~~~~~~
+    residual = raw_score - true_label
+    e.g. if the true label is sMCI (1) and the model outputs 1.7,
+    the residual is +0.7 — the model over-shoots toward pMCI.
+    After rounding, 1.7 rounds to 2 (pMCI) — a wrong prediction.
+
+    How to read it
+    ~~~~~~~~~~~~~~
+    Green bars (correct predictions after rounding)
+        Should cluster tightly around 0.  A wide spread means the model
+        is "accidentally" correct — rounding saves it but the raw output
+        is noisy.  Ideal: narrow green peak centred at 0.
+
+    Red bars (wrong predictions)
+        The sign of the red bars tells you the DIRECTION of confusion:
+        * Positive residual  → model over-shoots (e.g. sMCI predicted
+          as pMCI or AD).  The model thinks the subject is more advanced.
+        * Negative residual  → model under-shoots (e.g. pMCI predicted
+          as sMCI or CN).  The model thinks the subject is healthier.
+
+    Dashed vertical lines = mean residual for each group.
+    The vertical dotted lines at ±0.5 mark the rounding boundaries —
+    any residual outside that band will produce a wrong prediction.
+
+    Why this matters vs CrossEntropy
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    MSE treats the labels as an ordered scale (CN=0 < sMCI=1 < pMCI=2
+    < AD=3).  This is appropriate because Alzheimer's is a continuum.
+    The residual plot reveals whether errors are small (off by one stage)
+    or large (off by two+ stages), which the confusion matrix alone does
+    not show.  A large mean residual for a class signals systematic bias —
+    the model consistently over- or under-estimates disease severity for
+    that group.
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(14, 9))
+    fig.patch.set_facecolor(BACKGROUND)
+    fig.suptitle(
+        "MSE Regression Residual  (raw_score - true_label)",
+        fontsize=14, color=TEXT
+    )
+
+    bins = np.linspace(-(len(CLASS_NAMES) - 1), len(CLASS_NAMES) - 1, 35)
+
+    for idx, ax in enumerate(axes.flat):
+        ax.set_facecolor(SURFACE)
+        mask = labels == idx
+        if mask.sum() == 0:
+            ax.set_visible(False)
+            continue
+
+        residuals      = raw_scores[mask] - idx
+        correct_mask   = preds[mask] == idx
+        incorrect_mask = ~correct_mask
+
+        res_correct   = residuals[correct_mask]
+        res_incorrect = residuals[incorrect_mask]
+
+        ax.hist(res_correct,   bins=bins, color=GREEN, alpha=0.7,
+                label=f"Correct ({correct_mask.sum()})")
+        ax.hist(res_incorrect, bins=bins, color=RED,   alpha=0.7,
+                label=f"Wrong   ({incorrect_mask.sum()})")
+
+        if len(res_correct)   > 0:
+            ax.axvline(res_correct.mean(),   color=GREEN, linestyle="--",
+                       linewidth=1.5, label=f"mean={res_correct.mean():.2f}")
+        if len(res_incorrect) > 0:
+            ax.axvline(res_incorrect.mean(), color=RED,   linestyle="--",
+                       linewidth=1.5, label=f"mean={res_incorrect.mean():.2f}")
+
+        # Rounding boundaries
+        ax.axvline(-0.5, color=YELLOW, linestyle=":", linewidth=1, alpha=0.7)
+        ax.axvline( 0.5, color=YELLOW, linestyle=":", linewidth=1, alpha=0.7,
+                   label="±0.5 rounding boundary")
+        ax.axvline(0.0, color=TEXT_DIM, linestyle="-", linewidth=0.8, alpha=0.5)
+
+        ax.set_title(f"{CLASS_NAMES[idx]}  (total={mask.sum()})",
+                     color=CLASS_COLORS[idx])
+        ax.set_xlabel("Residual  (positive = over-predicts, negative = under-predicts)")
+        ax.set_ylabel("Count")
+        ax.legend(fontsize=8)
+        ax.grid(axis="y")
+
+    plt.tight_layout()
+    _savefig(fig, save_path)
+
+
+# ══════════════════════════════════════════════
+# 11b.  MSE — regression scatter  (replaces calibration)
+# ══════════════════════════════════════════════
+def plot_mse_regression_scatter(labels, preds, raw_scores, save_path):
+    """
+    Scatter plot of raw regression output vs true label, with jitter
+    to reveal density, colour-coded by prediction correctness.
+
+    Layout
+    ~~~~~~
+    X-axis = true label  (0=CN, 1=sMCI, 2=pMCI, 3=AD)
+    Y-axis = raw model output (continuous scalar before rounding)
+    Dashed horizontal lines = rounding thresholds (0.5, 1.5, 2.5)
+    Diagonal line = perfect prediction
+
+    How to read it
+    ~~~~~~~~~~~~~~
+    Green points = correct after rounding.  These should cluster
+        near the diagonal.  A tight vertical spread around y=x for
+        a given class means the model is confidently correct.
+
+    Red points = wrong after rounding.  Look at WHERE they land:
+        * Red points above the next threshold line → model pushed the
+          prediction into the next-higher class.
+        * Red points below → pushed into the next-lower class.
+        * Red points far from the diagonal → large errors, not just
+          boundary effects.
+
+    Box plots on the right margin (one per true class) summarise the
+    distribution of raw scores for each class — useful for spotting
+    systematic shifts (e.g. the sMCI box centred at 1.8 means the
+    model chronically over-shoots sMCI toward pMCI).
+
+    Why this is more informative than just the confusion matrix
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    The confusion matrix only shows the rounded prediction.  This
+    scatter shows the CONTINUOUS output — you can see whether the
+    model is just barely wrong (raw=1.51, rounds to 2 instead of 1)
+    or wildly wrong (raw=3.0 for a CN subject).  Barely-wrong cases
+    are easier to fix (better calibration / threshold tuning) than
+    wildly-wrong ones (which suggest the model has no signal for
+    that class).
+    """
+    fig = plt.figure(figsize=(12, 8))
+    fig.patch.set_facecolor(BACKGROUND)
+
+    # Main scatter takes 80% width, box plot 20%
+    gs  = fig.add_gridspec(1, 5, hspace=0, wspace=0.05)
+    ax  = fig.add_subplot(gs[:, :4])
+    axb = fig.add_subplot(gs[:, 4], sharey=ax)
+
+    ax.set_facecolor(SURFACE)
+    axb.set_facecolor(SURFACE)
+
+    rng = np.random.default_rng(42)
+
+    for true_cls in range(len(CLASS_NAMES)):
+        mask    = labels == true_cls
+        if mask.sum() == 0:
+            continue
+        correct = preds[mask] == true_cls
+        jitter  = rng.uniform(-0.18, 0.18, mask.sum())
+        x       = true_cls + jitter
+        y       = raw_scores[mask]
+
+        ax.scatter(x[correct],  y[correct],  color=GREEN, alpha=0.55,
+                   s=18, zorder=3)
+        ax.scatter(x[~correct], y[~correct], color=RED,   alpha=0.55,
+                   s=18, zorder=3)
+
+    # Perfect prediction diagonal
+    ax.plot([-0.5, len(CLASS_NAMES) - 0.5],
+            [-0.5, len(CLASS_NAMES) - 0.5],
+            "--", color=TEXT_DIM, linewidth=1.5, label="Perfect prediction")
+
+    # Rounding threshold lines
+    for thresh in [0.5, 1.5, 2.5]:
+        ax.axhline(thresh, color=YELLOW, linestyle=":", linewidth=1,
+                   alpha=0.6)
+
+    ax.set_xticks(range(len(CLASS_NAMES)))
+    ax.set_xticklabels(CLASS_NAMES, fontsize=11)
+    ax.set_ylabel("Raw model output (scalar before rounding)")
+    ax.set_xlabel("True class label")
+    ax.set_title("MSE Regression Scatter  (green=correct, red=wrong)",
+                 color=TEXT)
+    ax.legend(handles=[
+        mpatches.Patch(color=GREEN, alpha=0.7, label="Correct after rounding"),
+        mpatches.Patch(color=RED,   alpha=0.7, label="Wrong after rounding"),
+    ], loc="upper left")
+    ax.grid(axis="y", alpha=0.4)
+
+    # Box plots by true class on the right margin
+    box_data   = [raw_scores[labels == c] for c in range(len(CLASS_NAMES))]
+    bp = axb.boxplot(box_data, vert=True, patch_artist=True,
+                     positions=range(len(CLASS_NAMES)),
+                     widths=0.5, showfliers=False)
+    for patch, color in zip(bp["boxes"], CLASS_COLORS):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.5)
+    for element in ["whiskers", "caps", "medians"]:
+        for line in bp[element]:
+            line.set_color(TEXT_DIM)
+
+    axb.set_xticks(range(len(CLASS_NAMES)))
+    axb.set_xticklabels(CLASS_NAMES, fontsize=9)
+    axb.set_xlabel("Distribution")
+    axb.yaxis.set_tick_params(labelleft=False)
+    axb.set_facecolor(SURFACE)
+    axb.grid(axis="y", alpha=0.4)
+
+    plt.suptitle("Raw regression output per class", fontsize=13,
+                 color=TEXT, y=1.01)
+    plt.tight_layout()
+    _savefig(fig, save_path)
+
+
+# ══════════════════════════════════════════════
 # 11.  Text summary
 # ══════════════════════════════════════════════
-def write_summary(labels, preds, probs, experiment_name, save_path):
+def write_summary(labels, preds, scores, experiment_name, save_path,
+                  use_mse=False):
     acc       = accuracy_score(labels, preds)
     macro_f1  = f1_score(labels, preds, average="macro",    zero_division=0)
     macro_rec = recall_score(labels, preds, average="macro", zero_division=0)
@@ -1031,7 +1292,7 @@ def main():
         )
 
     model = BaselineModel(
-        class_num=1,
+        class_num=config_exp["model"]["num_classes"],
         fusion_method=config_exp["model"]["fusion_type"],
     ).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))

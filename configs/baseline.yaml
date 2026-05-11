@@ -20,7 +20,7 @@ model:
 training:
   device: cuda:0
   epochs: 40
-
+  use_mse: false
 optimizer:
   lr: 0.001
   weight_decay: 0.001

@@ -1,5 +1,5 @@
 experiment:
-  name: mri_pet_bl_pt_film
+  name: mri_pet_bl_pt_attention_mse
 
 data:
   batch_size: 4
@@ -7,7 +7,7 @@ data:
 
 model:
   num_classes: 4
-  fusion_type: film
+  fusion_type: CrossAttention
 
   class_names:
     - CN
@@ -20,7 +20,7 @@ model:
 training:
   device: cuda:0
   epochs: 40
-  use_mse: false
+  use_mse: true
 
 optimizer:
   lr: 0.001

@@ -1,0 +1,12 @@
+data:
+  root: /kaggle/input/datasets/kisokoghan/paired-npz/paired_npz
+  pretrained_path: /kaggle/input/models/khoalequangminh/vit-pretrained-75-mask-ratio/pytorch/default/1/ViT_B_pretrained_noaug_mae75_BRATS2023_IXI_OASIS3_seed_8456_999_077000.pth.tar
+
+training:
+  batch_size: 4
+  num_workers: 4
+
+split:
+  train_ratio: 0.7
+  val_ratio: 0.1
+  test_ratio: 0.2

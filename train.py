@@ -18,7 +18,12 @@ def parse_args():
         required=True,
         help="Experiment yaml"
     )
-
+    parser.add_argument(
+        "--system_config",
+        type=str,
+        default="configs/kaggle.yaml",
+        help="Path to system yaml (default: configs/kaggle.yaml)"
+    )
     return parser.parse_args()
 
 
@@ -29,7 +34,7 @@ def main():
     args = parse_args()
 
     # system config
-    config = read_config("configs/kaggle.yaml")
+    config = read_config(args.system_config)
 
     # experiment config
     config_experiment = read_config(args.config)
@@ -99,7 +104,8 @@ def main():
     model = train_end_to_end(
         train_dataloader=train_loader,
         val_dataloader=val_loader,
-        config=config_experiment
+        config=config_experiment,
+        pretrained_path = config["data"]["pretrained_path"]
     )
 
     results = test_model(

@@ -17,23 +17,23 @@ from src.utils import create_experiment_logger, print_experiment_config
 # DISPATCHER  –  call this from your main script
 # ══════════════════════════════════════════════════════════════════════════════
 
-def train_end_to_end(train_dataloader, val_dataloader, config):
+def train_end_to_end(train_dataloader, val_dataloader, config, pretrained_path=None):
     """
     Entry point.  Reads config["training"]["use_mse"] and dispatches to either:
       • train_end_to_end_mse          (MSE regression, scalar output)
       • train_end_to_end_crossentropy (CrossEntropyLoss, num_classes output)
     """
     if config["training"].get("use_mse", False):
-        return train_end_to_end_mse(train_dataloader, val_dataloader, config)
+        return train_end_to_end_mse(train_dataloader, val_dataloader, config, pretrained_path=pretrained_path)
     else:
-        return train_end_to_end_crossentropy(train_dataloader, val_dataloader, config)
+        return train_end_to_end_crossentropy(train_dataloader, val_dataloader, config, pretrained_path=pretrained_path)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPER  –  build model, optimizer, scheduler  (shared boilerplate)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _build_components(config, num_classes):
+def _build_components(config, num_classes, pretrained_path=None):
     """
     Instantiates model, optimizer, and LR scheduler from config.
     `num_classes` is passed explicitly so callers can set it to 1 (MSE) or
@@ -45,7 +45,7 @@ def _build_components(config, num_classes):
         class_num=num_classes,
         fusion_method=config["model"]["fusion_type"],
         pretrained=config["model"]["pretrained"],
-        pretrained_path=config["model"]["pretrained_path"]
+        pretrained_path=pretrained_path
     ).to(device)
 
     optimizer = optim.SGD(
@@ -69,7 +69,7 @@ def _build_components(config, num_classes):
 # VARIANT 1  –  MSE regression
 # ══════════════════════════════════════════════════════════════════════════════
 
-def train_end_to_end_mse(train_dataloader, val_dataloader, config):
+def train_end_to_end_mse(train_dataloader, val_dataloader, config, pretrained_path=None):
     """
     Trains the model as a scalar regressor.
 
@@ -87,7 +87,7 @@ def train_end_to_end_mse(train_dataloader, val_dataloader, config):
     num_classes = config["model"]["num_classes"]
 
     # ── model outputs a single scalar ──────────────────────────────────────
-    model, optimizer, lr_scheduler = _build_components(config, num_classes=1)
+    model, optimizer, lr_scheduler = _build_components(config, num_classes=1, pretrained_path=pretrained_path)
 
     criterion = nn.MSELoss()
 
@@ -185,7 +185,7 @@ def train_end_to_end_mse(train_dataloader, val_dataloader, config):
 # VARIANT 2  –  CrossEntropy classification  (original logic, unchanged)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def train_end_to_end_crossentropy(train_dataloader, val_dataloader, config):
+def train_end_to_end_crossentropy(train_dataloader, val_dataloader, config, pretrained_path=None):
     """
     Original CrossEntropyLoss training, kept intact and renamed so both
     variants live side-by-side.
@@ -196,7 +196,7 @@ def train_end_to_end_crossentropy(train_dataloader, val_dataloader, config):
     epochs = config["training"]["epochs"]
     num_classes = config["model"]["num_classes"]
 
-    model, optimizer, lr_scheduler = _build_components(config, num_classes=num_classes)
+    model, optimizer, lr_scheduler = _build_components(config, num_classes=num_classes, pretrained_path=pretrained_path)
 
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
 

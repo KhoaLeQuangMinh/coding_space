@@ -1,5 +1,5 @@
 experiment:
-  name: mri_pet_baseline_pretrained_mse
+  name: mri_pet_bl_pt_gated_mse
 
 data:
   batch_size: 4
@@ -7,7 +7,7 @@ data:
 
 model:
   num_classes: 4
-  fusion_type: concat
+  fusion_type: gated
 
   class_names:
     - CN
@@ -19,8 +19,7 @@ model:
 training:
   device: cuda:0
   epochs: 40
-  use_mse: true
-
+  use_mse: false
 
 optimizer:
   lr: 0.001

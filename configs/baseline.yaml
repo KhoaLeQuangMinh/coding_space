@@ -11,11 +11,10 @@ model:
 
   class_names:
     - CN
-    - EMCI
-    - LMCI
+    - sMCI
+    - pMCI
     - AD
   pretrained: false
-  pretrained_path: null
 
 training:
   device: cuda:0

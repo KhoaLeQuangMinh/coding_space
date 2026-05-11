@@ -161,7 +161,7 @@ def train_end_to_end_mse(train_dataloader, val_dataloader, config, pretrained_pa
             best_f1 = macro_f1
             torch.save(
                 model.state_dict(),
-                f"[{config['experiment']['name']}]_mse.pth"
+                f"[{config['experiment']['name']}].pth"
             )
 
         print(

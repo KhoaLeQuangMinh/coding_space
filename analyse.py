@@ -1031,7 +1031,7 @@ def main():
         )
 
     model = BaselineModel(
-        class_num=config_exp["model"]["num_classes"],
+        class_num=1,
         fusion_method=config_exp["model"]["fusion_type"],
     ).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))

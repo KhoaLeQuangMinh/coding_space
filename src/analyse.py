@@ -36,9 +36,9 @@ from sklearn.metrics import (
 )
 from tqdm import tqdm
 
-from src.data import MRIPETDataset
-from src.baseline_model import BaselineModel
-from src.utils import read_config
+from data import MRIPETDataset
+from baseline_model import BaselineModel
+from utils import read_config
 
 # ──────────────────────────────────────────────
 # Palette & style

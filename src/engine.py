@@ -1,363 +1,323 @@
+"""
+engine.py
+=========
+Loosely-coupled training / evaluation engine.
+
+Public surface
+--------------
+build_model(args)                 -> nn.Module
+build_optimizer(model, args)      -> Optimizer
+build_scheduler(optimizer, args)  -> LRScheduler
+build_criterion(args)             -> (criterion_fn, decode_fn)
+    criterion_fn(outputs, labels) -> scalar loss
+    decode_fn(outputs, args)      -> integer class predictions  (1-D LongTensor)
+
+train(train_loader, val_loader, args, pretrained_path)
+test_model(test_loader, model_path, args)
+"""
+
 from sklearn.metrics import (
-    accuracy_score,
-    f1_score,
-    recall_score,
-    classification_report,
-    confusion_matrix
+    accuracy_score, f1_score, recall_score,
+    classification_report, confusion_matrix,
 )
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
+
 from src.baseline_model import BaselineModel
 from src.utils import create_experiment_logger, print_experiment_config
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DISPATCHER  –  call this from your main script
+# Factory helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
-def train_end_to_end(train_dataloader, val_dataloader, config, pretrained_path=None):
+def build_model(args, pretrained_path=None) -> nn.Module:
     """
-    Entry point.  Reads config["training"]["use_mse"] and dispatches to either:
-      • train_end_to_end_mse          (MSE regression, scalar output)
-      • train_end_to_end_crossentropy (CrossEntropyLoss, num_classes output)
-    """
-    if config["training"].get("use_mse", False):
-        return train_end_to_end_mse(train_dataloader, val_dataloader, config, pretrained_path=pretrained_path)
-    else:
-        return train_end_to_end_crossentropy(train_dataloader, val_dataloader, config, pretrained_path=pretrained_path)
+    Instantiate a BaselineModel from a flat args namespace.
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# HELPER  –  build model, optimizer, scheduler  (shared boilerplate)
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _build_components(config, num_classes, pretrained_path=None):
+    num_classes is set to 1 when loss=='mse' (scalar regression head)
+    and to args.num_classes for every classification loss.
     """
-    Instantiates model, optimizer, and LR scheduler from config.
-    `num_classes` is passed explicitly so callers can set it to 1 (MSE) or
-    the real class count (CrossEntropy).
-    """
-    device = config["training"]["device"]
+    out_classes = 1 if args.loss == "mse" else args.num_classes
 
     model = BaselineModel(
-        class_num=num_classes,
-        fusion_method=config["model"]["fusion_type"],
-        pretrained=config["model"]["pretrained"],
-        pretrained_path=pretrained_path
-    ).to(device)
+        fusion_method  = args.fusion_type,
+        out_feature_dim= args.feature_dim,
+        class_num      = out_classes,
+        pretrained     = args.pretrained,
+        pretrained_path= pretrained_path,
+    )
+    return model.to(args.device)
 
-    optimizer = optim.SGD(
+
+def build_optimizer(model: nn.Module, args) -> optim.Optimizer:
+    """
+    Build an SGD optimizer.  Swap the body here to support Adam etc. without
+    touching anything else.
+    """
+    return optim.SGD(
         model.parameters(),
-        lr=config["optimizer"]["lr"],
-        weight_decay=config["optimizer"]["weight_decay"],
-        momentum=config["optimizer"]["momentum"]
+        lr          = args.lr,
+        weight_decay= args.weight_decay,
+        momentum    = args.momentum,
     )
 
-    lr_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+
+def build_scheduler(optimizer: optim.Optimizer, args):
+    """
+    CosineAnnealingWarmRestarts scheduler.
+    """
+    return optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer,
-        T_0=config["scheduler"]["T_0"],
-        T_mult=config["scheduler"]["T_mult"],
-        eta_min=config["scheduler"]["eta_min"]
+        T_0   = args.T_0,
+        T_mult= args.T_mult,
+        eta_min= args.eta_min,
     )
 
-    return model, optimizer, lr_scheduler
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# VARIANT 1  –  MSE regression
-# ══════════════════════════════════════════════════════════════════════════════
-
-def train_end_to_end_mse(train_dataloader, val_dataloader, config, pretrained_path=None):
+def build_criterion(args):
     """
-    Trains the model as a scalar regressor.
+    Return a ``(criterion_fn, decode_fn)`` pair that matches the chosen loss.
 
-    • Model output : (B, 1)  – a single continuous value per sample
-    • Loss         : MSELoss between the predicted scalar and the integer label
-                     (labels are cast to float, e.g. 0.0 / 1.0 / 2.0 / 3.0)
-    • Prediction   : round the scalar to the nearest integer, then clamp to
-                     [0, num_classes-1] so out-of-range predictions still map
-                     to a valid class
+    criterion_fn(outputs, labels) -> scalar tensor loss
+    decode_fn(outputs, args)      -> 1-D LongTensor of predicted class indices
+
+    Supported values of args.loss
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    "crossentropy"  CrossEntropyLoss with label smoothing (default 0.1).
+                    decode_fn = argmax over class dimension.
+
+    "mse"           MSELoss; model head has 1 output neuron.
+                    decode_fn = round scalar to nearest integer, clamp to
+                    [0, num_classes-1].
+
+    "focal"         Focal loss (gamma=2) — useful for class-imbalanced data.
+                    decode_fn = argmax (same as crossentropy).
+
+    Adding a new loss
+    ~~~~~~~~~~~~~~~~~
+    Add an ``elif args.loss == "your_name":`` branch, define criterion and
+    decode_fn, done.  No other file needs to change.
     """
-    experiment_name = config["experiment"]["name"]
-    log_file, logger = create_experiment_logger(experiment_name)
-    device = config["training"]["device"]
-    epochs = config["training"]["epochs"]
-    num_classes = config["model"]["num_classes"]
 
-    # ── model outputs a single scalar ──────────────────────────────────────
-    model, optimizer, lr_scheduler = _build_components(config, num_classes=1, pretrained_path=pretrained_path)
+    if args.loss == "crossentropy":
+        smoothing = getattr(args, "label_smoothing", 0.1)
+        criterion = nn.CrossEntropyLoss(label_smoothing=smoothing)
 
-    criterion = nn.MSELoss()
+        def decode_fn(outputs, _args):
+            return torch.argmax(outputs, dim=1)
 
-    best_f1 = 0.0
-    print_experiment_config(config)
-    print(f"[MSE mode] Using device: {device}")
+    elif args.loss == "mse":
+        criterion = nn.MSELoss()
 
-    for epoch in range(epochs):
-
-        # ── TRAIN ────────────────────────────────────────────────────────
-        model.train()
-        train_loss = 0.0
-
-        train_bar = tqdm(
-            train_dataloader,
-            desc=f"Train Epoch[{epoch+1}/{epochs}]"
-        )
-
-        for batch in train_bar:
-            mri_data = batch["mri"].to(device)
-            pet_data = batch["pet"].to(device)
-            # Cast labels to float for MSE  →  shape (B,)
-            labels = batch["label"].float().to(device)
-
-            optimizer.zero_grad()
-
-            # outputs shape: (B, 1)  →  squeeze to (B,)
-            outputs = model(mri_data, pet_data).squeeze(1)
-
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            train_loss += loss.item()
-            train_bar.set_postfix({"loss": f"{loss.item():.4f}"})
-
-        train_loss /= len(train_dataloader)
-        lr_scheduler.step()
-
-        # ── VALIDATION ───────────────────────────────────────────────────
-        model.eval()
-        val_loss = 0.0
-        all_preds = []
-        all_labels = []
-
-        with torch.no_grad():
-            for batch in val_dataloader:
-                mri_data = batch["mri"].to(device)
-                pet_data = batch["pet"].to(device)
-                labels = batch["label"].float().to(device)
-
-                outputs = model(mri_data, pet_data).squeeze(1)   # (B,)
-                loss = criterion(outputs, labels)
-                val_loss += loss.item()
-
-                # Nearest-integer prediction, clamped to valid class range
-                preds = outputs.round().long().clamp(0, num_classes - 1)
-
-                all_preds.extend(preds.cpu().numpy())
-                all_labels.extend(labels.long().cpu().numpy())
-
-        val_loss /= len(val_dataloader)
-
-        # ── METRICS ──────────────────────────────────────────────────────
-        acc = accuracy_score(all_labels, all_preds)
-        macro_f1 = f1_score(all_labels, all_preds, average="macro", zero_division=0)
-        macro_recall = recall_score(all_labels, all_preds, average="macro", zero_division=0)
-
-        # ── SAVE BEST MODEL ───────────────────────────────────────────────
-        if macro_f1 > best_f1:
-            best_f1 = macro_f1
-            torch.save(
-                model.state_dict(),
-                f"[{config['experiment']['name']}].pth"
+        def decode_fn(outputs, _args):
+            return (
+                outputs.squeeze(1)
+                       .round()
+                       .long()
+                       .clamp(0, _args.num_classes - 1)
             )
 
-        print(
-            f"Epoch {epoch+1}/{epochs} | "
-            f"Train Loss: {train_loss:.4f} | "
-            f"Val Loss: {val_loss:.4f} | "
-            f"Acc: {acc:.4f} | "
-            f"F1: {macro_f1:.4f} | "
-            f"Recall: {macro_recall:.4f}"
+    elif args.loss == "focal":
+        gamma     = getattr(args, "focal_gamma", 2.0)
+        ce_loss   = nn.CrossEntropyLoss(reduction="none")
+
+        def criterion(outputs, labels):
+            ce   = ce_loss(outputs, labels)
+            pt   = torch.exp(-ce)
+            return ((1 - pt) ** gamma * ce).mean()
+
+        def decode_fn(outputs, _args):
+            return torch.argmax(outputs, dim=1)
+
+    else:
+        raise ValueError(
+            f"Unknown loss '{args.loss}'. "
+            "Choose from: crossentropy | mse | focal"
         )
 
+    return criterion, decode_fn
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Inner loops
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _train_one_epoch(model, loader, criterion, decode_fn, optimizer, args):
+    model.train()
+    total_loss = 0.0
+
+    bar = tqdm(loader, desc="Train", leave=False)
+    for batch in bar:
+        mri    = batch["mri"].to(args.device)
+        pet    = batch["pet"].to(args.device)
+
+        if args.loss == "mse":
+            labels = batch["label"].float().to(args.device)
+        else:
+            labels = batch["label"].to(args.device)
+
+        optimizer.zero_grad()
+        outputs = model(mri, pet)
+        loss    = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item()
+        bar.set_postfix(loss=f"{loss.item():.4f}")
+
+    return total_loss / len(loader)
+
+
+def _evaluate(model, loader, criterion, decode_fn, args):
+    model.eval()
+    total_loss = 0.0
+    all_preds, all_labels = [], []
+
+    with torch.no_grad():
+        for batch in loader:
+            mri    = batch["mri"].to(args.device)
+            pet    = batch["pet"].to(args.device)
+
+            if args.loss == "mse":
+                labels = batch["label"].float().to(args.device)
+            else:
+                labels = batch["label"].to(args.device)
+
+            outputs = model(mri, pet)
+            loss    = criterion(outputs, labels)
+            total_loss += loss.item()
+
+            preds = decode_fn(outputs, args)
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(
+                labels.long().cpu().numpy()
+                if args.loss == "mse"
+                else labels.cpu().numpy()
+            )
+
+    avg_loss   = total_loss / len(loader)
+    acc        = accuracy_score(all_labels, all_preds)
+    macro_f1   = f1_score(all_labels, all_preds, average="macro", zero_division=0)
+    macro_rec  = recall_score(all_labels, all_preds, average="macro", zero_division=0)
+    return avg_loss, acc, macro_f1, macro_rec
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Public: train
+# ══════════════════════════════════════════════════════════════════════════════
+
+def train(train_loader, val_loader, args, pretrained_path=None):
+    """
+    Full training loop.
+
+    Parameters
+    ----------
+    train_loader, val_loader : DataLoader
+    args                     : argparse.Namespace  (flat, all fields present)
+    pretrained_path          : str | None
+
+    Returns
+    -------
+    model : the best-F1 model (weights already saved to disk)
+    """
+    print_experiment_config(args)
+    print(f"[{args.loss.upper()} mode]  device: {args.device}\n")
+
+    log_file, logger = create_experiment_logger(args.experiment_name)
+    criterion, decode_fn = build_criterion(args)
+    model      = build_model(args, pretrained_path)
+    optimizer  = build_optimizer(model, args)
+    scheduler  = build_scheduler(optimizer, args)
+
+    best_f1    = 0.0
+    model_path = f"[{args.experiment_name}].pth"
+
+    for epoch in range(args.epochs):
+        train_loss = _train_one_epoch(
+            model, train_loader, criterion, decode_fn, optimizer, args
+        )
+        scheduler.step()
+
+        val_loss, acc, macro_f1, macro_rec = _evaluate(
+            model, val_loader, criterion, decode_fn, args
+        )
+
+        if macro_f1 > best_f1:
+            best_f1 = macro_f1
+            torch.save(model.state_dict(), model_path)
+
         current_lr = optimizer.param_groups[0]["lr"]
-        logger.writerow([epoch + 1, train_loss, val_loss, acc, macro_f1, macro_recall, current_lr])
+
+        print(
+            f"Epoch {epoch+1:>3}/{args.epochs} | "
+            f"Train {train_loss:.4f} | Val {val_loss:.4f} | "
+            f"Acc {acc:.4f} | F1 {macro_f1:.4f} | "
+            f"Rec {macro_rec:.4f} | LR {current_lr:.6f}"
+        )
+
+        logger.writerow([epoch + 1, train_loss, val_loss, acc, macro_f1, macro_rec, current_lr])
         log_file.flush()
 
     log_file.close()
+    print(f"\nBest val F1: {best_f1:.4f}  — weights saved to {model_path}")
     return model
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# VARIANT 2  –  CrossEntropy classification  (original logic, unchanged)
+# Public: test
 # ══════════════════════════════════════════════════════════════════════════════
 
-def train_end_to_end_crossentropy(train_dataloader, val_dataloader, config, pretrained_path=None):
+def test_model(test_loader, model_path: str, args):
     """
-    Original CrossEntropyLoss training, kept intact and renamed so both
-    variants live side-by-side.
+    Load a saved checkpoint and evaluate on the test split.
+
+    Works for any loss variant because it reuses ``build_criterion``.
     """
-    experiment_name = config["experiment"]["name"]
-    log_file, logger = create_experiment_logger(experiment_name)
-    device = config["training"]["device"]
-    epochs = config["training"]["epochs"]
-    num_classes = config["model"]["num_classes"]
-
-    model, optimizer, lr_scheduler = _build_components(config, num_classes=num_classes, pretrained_path=pretrained_path)
-
-    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
-
-    best_f1 = 0.0
-    print_experiment_config(config)
-    print(f"[CrossEntropy mode] Using device: {device}")
-
-    for epoch in range(epochs):
-
-        # ── TRAIN ────────────────────────────────────────────────────────
-        model.train()
-        train_loss = 0.0
-
-        train_bar = tqdm(
-            train_dataloader,
-            desc=f"Train Epoch[{epoch+1}/{epochs}]"
-        )
-
-        for batch in train_bar:
-            mri_data = batch["mri"].to(device)
-            pet_data = batch["pet"].to(device)
-            labels = batch["label"].to(device)
-
-            optimizer.zero_grad()
-
-            outputs = model(mri_data, pet_data)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            train_loss += loss.item()
-            train_bar.set_postfix({"loss": f"{loss.item():.4f}"})
-
-        train_loss /= len(train_dataloader)
-        lr_scheduler.step()
-
-        # ── VALIDATION ───────────────────────────────────────────────────
-        model.eval()
-        val_loss = 0.0
-        all_preds = []
-        all_labels = []
-
-        with torch.no_grad():
-            for batch in val_dataloader:
-                mri_data = batch["mri"].to(device)
-                pet_data = batch["pet"].to(device)
-                labels = batch["label"].to(device)
-
-                outputs = model(mri_data, pet_data)
-                loss = criterion(outputs, labels)
-                val_loss += loss.item()
-
-                preds = torch.argmax(outputs, dim=1)
-                all_preds.extend(preds.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
-
-        val_loss /= len(val_dataloader)
-
-        # ── METRICS ──────────────────────────────────────────────────────
-        acc = accuracy_score(all_labels, all_preds)
-        macro_f1 = f1_score(all_labels, all_preds, average="macro", zero_division=0)
-        macro_recall = recall_score(all_labels, all_preds, average="macro", zero_division=0)
-
-        # ── SAVE BEST MODEL ───────────────────────────────────────────────
-        if macro_f1 > best_f1:
-            best_f1 = macro_f1
-            torch.save(
-                model.state_dict(),
-                f"[{config['experiment']['name']}].pth"
-            )
-
-        print(
-            f"Epoch {epoch+1}/{epochs} | "
-            f"Train Loss: {train_loss:.4f} | "
-            f"Val Loss: {val_loss:.4f} | "
-            f"Acc: {acc:.4f} | "
-            f"F1: {macro_f1:.4f} | "
-            f"Recall: {macro_recall:.4f}"
-        )
-
-        current_lr = optimizer.param_groups[0]["lr"]
-        logger.writerow([epoch + 1, train_loss, val_loss, acc, macro_f1, macro_recall, current_lr])
-        log_file.flush()
-
-    log_file.close()
-    return model
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TEST  –  works for both variants
-# ══════════════════════════════════════════════════════════════════════════════
-
-def test_model(test_loader, model_path, config):
-    """
-    Loads a saved model and evaluates it on the test set.
-
-    Handles both output shapes automatically:
-      • MSE mode (use_mse=true)  → model output (B, 1), nearest-integer decoding
-      • CE  mode (use_mse=false) → model output (B, C), argmax decoding
-    """
-    device = config["training"]["device"]
-    num_classes = config["model"]["num_classes"]
-    use_mse = config["training"].get("use_mse", False)
-
-    # ── BUILD MODEL ──────────────────────────────────────────────────────────
-    model = BaselineModel(
-        class_num=1 if use_mse else num_classes,
-        fusion_method=config["model"]["fusion_type"]
-    ).to(device)
-
-    # ── LOAD WEIGHTS ─────────────────────────────────────────────────────────
-    model.load_state_dict(torch.load(model_path, map_location=device))
+    criterion, decode_fn = build_criterion(args)
+    model = build_model(args)                               # no pretrained path needed
+    model.load_state_dict(torch.load(model_path, map_location=args.device))
     model.eval()
 
-    all_preds = []
-    all_labels = []
+    all_preds, all_labels = [], []
 
-    print(f"Testing on device: {device}  |  mode: {'MSE' if use_mse else 'CrossEntropy'}")
+    print(f"\nTesting  |  loss={args.loss}  |  device={args.device}")
 
-    # ── INFERENCE ────────────────────────────────────────────────────────────
     with torch.no_grad():
-        for batch in tqdm(test_loader, desc="Testing"):
-            mri_data = batch["mri"].to(device)
-            pet_data = batch["pet"].to(device)
+        for batch in tqdm(test_loader, desc="Test"):
+            mri    = batch["mri"].to(args.device)
+            pet    = batch["pet"].to(args.device)
             labels = batch["label"]
 
-            outputs = model(mri_data, pet_data)
-
-            if use_mse:
-                # (B, 1) → (B,) scalar, round to nearest class
-                preds = outputs.squeeze(1).round().long().clamp(0, num_classes - 1)
-            else:
-                # (B, C) → argmax
-                preds = torch.argmax(outputs, dim=1)
+            outputs = model(mri, pet)
+            preds   = decode_fn(outputs, args)
 
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.numpy())
 
-    # ── METRICS ──────────────────────────────────────────────────────────────
-    acc = accuracy_score(all_labels, all_preds)
-    macro_f1 = f1_score(all_labels, all_preds, average="macro", zero_division=0)
-    macro_recall = recall_score(all_labels, all_preds, average="macro", zero_division=0)
+    acc       = accuracy_score(all_labels, all_preds)
+    macro_f1  = f1_score(all_labels, all_preds, average="macro", zero_division=0)
+    macro_rec = recall_score(all_labels, all_preds, average="macro", zero_division=0)
+    cm        = confusion_matrix(all_labels, all_preds)
 
     print("\n===== TEST RESULTS =====")
-    print(f"Accuracy:     {acc:.4f}")
-    print(f"Macro F1:     {macro_f1:.4f}")
-    print(f"Macro Recall: {macro_recall:.4f}")
-
-    # ── CLASSIFICATION REPORT ────────────────────────────────────────────────
-    class_names = config["model"]["class_names"]
+    print(f"  Accuracy     : {acc:.4f}")
+    print(f"  Macro F1     : {macro_f1:.4f}")
+    print(f"  Macro Recall : {macro_rec:.4f}")
     print("\nClassification Report:")
-    print(classification_report(all_labels, all_preds, target_names=class_names, zero_division=0))
-
-    # ── CONFUSION MATRIX ─────────────────────────────────────────────────────
-    cm = confusion_matrix(all_labels, all_preds)
-    print("\nConfusion Matrix:")
+    print(classification_report(
+        all_labels, all_preds,
+        target_names=args.class_names,
+        zero_division=0,
+    ))
+    print("Confusion Matrix:")
     print(cm)
 
     return {
-        "accuracy": acc,
-        "macro_f1": macro_f1,
-        "macro_recall": macro_recall,
-        "confusion_matrix": cm
+        "accuracy":         acc,
+        "macro_f1":         macro_f1,
+        "macro_recall":     macro_rec,
+        "confusion_matrix": cm,
     }

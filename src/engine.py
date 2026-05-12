@@ -113,12 +113,8 @@ def build_criterion(args):
         criterion = nn.MSELoss()
 
         def decode_fn(outputs, _args):
-            return (
-                outputs.squeeze(1)
-                       .round()
-                       .long()
-                       .clamp(0, _args.num_classes - 1)
-            )
+            # outputs is already (B,) — squeezed by the caller before this is invoked
+            return outputs.round().long().clamp(0, _args.num_classes - 1)
 
     elif args.loss == "focal":
         gamma     = getattr(args, "focal_gamma", 2.0)
@@ -161,6 +157,8 @@ def _train_one_epoch(model, loader, criterion, decode_fn, optimizer, args):
 
         optimizer.zero_grad()
         outputs = model(mri, pet)
+        if args.loss == "mse":
+            outputs = outputs.squeeze(1)   # (B, 1) -> (B,) to match float label shape
         loss    = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -187,6 +185,8 @@ def _evaluate(model, loader, criterion, decode_fn, args):
                 labels = batch["label"].to(args.device)
 
             outputs = model(mri, pet)
+            if args.loss == "mse":
+                outputs = outputs.squeeze(1)   # (B, 1) -> (B,)
             loss    = criterion(outputs, labels)
             total_loss += loss.item()
 

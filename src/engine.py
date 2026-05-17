@@ -292,6 +292,8 @@ def test_model(test_loader, model_path: str, args):
             labels = batch["label"]
 
             outputs = model(mri, pet)
+            if args.loss == "mse":
+                outputs = outputs.squeeze(1)   # (B, 1) -> (B,) consistent with _evaluate
             preds   = decode_fn(outputs, args)
 
             all_preds.extend(preds.cpu().numpy())

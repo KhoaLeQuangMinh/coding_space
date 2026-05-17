@@ -681,6 +681,13 @@ def parse_args():
     p.add_argument("--loss", type=str, default="crossentropy",
                    choices=["crossentropy", "mse", "focal"])
 
+    # ── KFold (must match what was used at training time) ─────────────────
+    p.add_argument("--kfold", type=int, default=0,
+                   help="Number of folds used at training time. 0 = single split.")
+    p.add_argument("--fold",  type=int, default=None,
+                   help="Which fold checkpoint to load (1-based). "
+                        "Defaults to the best fold, but you can specify any fold.")
+
     # ── Analysis ──────────────────────────────────────────────────────────
     p.add_argument("--split",        type=str, default="test",
                    choices=["train", "val", "test"])
@@ -711,27 +718,56 @@ def main():
     print(f"  Output dir : {save_dir}")
     print(f"{'='*62}\n")
 
-    # ── Dataset ───────────────────────────────────────────────────────────
-    dataset   = MRIPETDataset(root=args.data_root)
-    generator = torch.Generator().manual_seed(args.seed)
+    # ── Dataset & split reconstruction ────────────────────────────────────
+    # IMPORTANT: must use the exact same split logic as train.py so the
+    # test indices are identical to what the model never saw during training.
+    dataset = MRIPETDataset(root=args.data_root)
 
-    train_sz = int(args.train_ratio * len(dataset))
-    val_sz   = int(args.val_ratio   * len(dataset))
-    test_sz  = len(dataset) - train_sz - val_sz
+    if args.kfold > 0:
+        # KFold mode: replicate the numpy permutation from run_kfold
+        import numpy as _np
+        all_indices   = _np.arange(len(dataset))
+        test_ratio    = 1.0 - args.train_ratio - args.val_ratio
+        test_size     = int(test_ratio * len(dataset))
+        rng           = _np.random.default_rng(args.seed)
+        shuffled      = rng.permutation(all_indices)
+        test_indices  = shuffled[:test_size]
 
-    train_ds, val_ds, test_ds = random_split(
-        dataset, [train_sz, val_sz, test_sz], generator=generator
-    )
-    chosen_ds = {"train": train_ds, "val": val_ds, "test": test_ds}[args.split]
+        from torch.utils.data import Subset
+        from src.utils import seed_worker
+        g = torch.Generator().manual_seed(args.seed)
+        chosen_ds = Subset(dataset, test_indices)
+        print(f"  KFold mode — test split: {len(test_indices)} samples "
+              f"(same held-out set as training)\n")
+    else:
+        # Single split: replicate the random_split from run_single
+        generator = torch.Generator().manual_seed(args.seed)
+        train_sz  = int(args.train_ratio * len(dataset))
+        val_sz    = int(args.val_ratio   * len(dataset))
+        test_sz   = len(dataset) - train_sz - val_sz
+        train_ds, val_ds, test_ds = random_split(
+            dataset, [train_sz, val_sz, test_sz], generator=generator
+        )
+        chosen_ds = {"train": train_ds, "val": val_ds, "test": test_ds}[args.split]
+        print(f"  Single-split mode — {args.split}: {len(chosen_ds)} samples\n")
 
     loader = DataLoader(
         chosen_ds, batch_size=args.batch_size,
         shuffle=False, num_workers=args.num_workers,
     )
-    print(f"  Dataset ({args.split}): {len(chosen_ds)} samples\n")
 
-    # ── Model ─────────────────────────────────────────────────────────────
-    model_path = f"[{args.experiment_name}].pth"
+    # ── Checkpoint path ───────────────────────────────────────────────────
+    # Single split:  [experiment_name].pth
+    # KFold:         [experiment_name_foldN].pth  where N = args.fold
+    if args.kfold > 0:
+        if args.fold is None:
+            raise ValueError(
+                "When --kfold > 0 you must also pass --fold N "
+                "(the fold number printed in the KFold summary as 'Best fold')."
+            )
+        model_path = f"[{args.experiment_name}_fold{args.fold}].pth"
+    else:
+        model_path = f"[{args.experiment_name}].pth"
     if not os.path.exists(model_path):
         raise FileNotFoundError(
             f"Weights not found: {model_path}\n"

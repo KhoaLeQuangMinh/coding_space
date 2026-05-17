@@ -183,7 +183,14 @@ def run_kfold(dataset, args):
 
     # ── 1. Carve out test set — identical to single-split, never seen in CV ─
     all_indices = np.arange(len(dataset))
-    all_labels  = np.array([dataset[i]["label"].item() for i in all_indices])
+
+    # Fast label fetch — reads only the tiny "label" field, not the full volumes
+    import os as _os
+    from src.data import LABEL_MAP
+    all_labels = np.array([
+        LABEL_MAP[np.load(_os.path.join(dataset.root, dataset.subjects[i]))["label"].item()]
+        for i in all_indices
+    ])
 
     test_ratio    = 1.0 - args.train_ratio - args.val_ratio
     test_size     = int(test_ratio * len(dataset))

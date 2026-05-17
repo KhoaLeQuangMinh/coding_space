@@ -90,6 +90,8 @@ python analyse.py \
   --scan_samples     3 \
   --device           cuda:0 \
   --seed             12345
+  --kfold            5 \
+  --fold             3      # whichever fold was printed as "Best fold"
 
 # Run on validation split instead of test
 python analyse.py \

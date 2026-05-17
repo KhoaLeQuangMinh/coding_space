@@ -145,7 +145,7 @@ def run_inference(model, loader, device, decode_fn, score_fn, num_classes=4):
     subjects : list
     buckets  : dict  { (true_cls, pred_cls): [{"mri","pet","subject_id","conf"}, ...] }
     """
-    MAX_STORE = 6
+    MAX_STORE = 10
     model.eval()
 
     all_preds, all_labels, all_scores, all_subjects = [], [], [], []
@@ -558,8 +558,7 @@ def plot_confused_pairs(buckets, class_names, save_dir, max_samples=3):
         tag = f"confused_{true_name.lower()}_as_{pred_name.lower()}"
         _savefig(fig, save_dir / f"{tag}.png")
 
-
-def plot_misclassification_comparison(buckets, class_names, save_dir):
+def plot_misclassification_comparison(buckets, class_names, save_dir, max_samples=5):
     """
     For each requested confusion pair, produce one figure where two subjects
     are shown side-by-side — one from each true class — but both were
@@ -585,22 +584,11 @@ def plot_misclassification_comparison(buckets, class_names, save_dir):
     samples for a given pair exist in the test set).
     """
 
-    def _vol_to_slice(tensor):
-        """Axial mid-slice, shape (H, W), from (1, H, W, D) or (H, W, D)."""
-        vol = tensor.squeeze(0).numpy()
-        return np.rot90(vol[:, :, vol.shape[2] // 2])
-
     def _draw_image_and_hist(axes, col, volume_tensor, modality_label,
                              class_label, img_cmap, accent_color):
-        """
-        Fill two adjacent axes (axes[col], axes[col+1]) with:
-          left  — axial mid-slice of the volume
-          right — intensity histogram of the full 3-D volume
-        """
-        vol    = volume_tensor.squeeze(0).numpy()          # (H, W, D)
-        slc    = np.rot90(vol[:, :, vol.shape[2] // 2])   # axial mid-slice
+        vol    = volume_tensor.squeeze(0).numpy()
+        slc    = np.rot90(vol[:, :, vol.shape[2] // 2])
 
-        # ── image ──────────────────────────────────────────────────────────
         ax_img = axes[col]
         ax_img.imshow(slc, cmap=img_cmap, aspect="equal")
         ax_img.set_title(f"{modality_label}\n{class_label}",
@@ -608,11 +596,9 @@ def plot_misclassification_comparison(buckets, class_names, save_dir):
         ax_img.axis("off")
         ax_img.set_facecolor(SURFACE)
 
-        # ── histogram ──────────────────────────────────────────────────────
         ax_hist = axes[col + 1]
         ax_hist.set_facecolor(SURFACE)
         flat = vol.flatten()
-        # clip extreme tails for readability (1st–99th percentile)
         lo, hi = np.percentile(flat, 1), np.percentile(flat, 99)
         clipped = flat[(flat >= lo) & (flat <= hi)]
         ax_hist.hist(clipped, bins=60, color=accent_color,
@@ -629,31 +615,26 @@ def plot_misclassification_comparison(buckets, class_names, save_dir):
         for spine in ax_hist.spines.values():
             spine.set_edgecolor(BORDER)
 
-    # ── define the five requested pairs ────────────────────────────────────
-    # Each entry: (true_cls_A, true_cls_B, pred_cls, filename_tag)
-    # true_cls_A and true_cls_B are indices into class_names.
-    # pred_cls is also an index — both subjects must have been predicted as this.
     def _idx(name):
         try:
             return class_names.index(name)
         except ValueError:
-            return None   # class not present in this experiment's class_names
+            return None
 
     CN, sMCI, pMCI, AD = _idx("CN"), _idx("sMCI"), _idx("pMCI"), _idx("AD")
 
     requested = []
     if None not in (CN, sMCI):
-        requested.append((CN, sMCI, CN,   "confused_cn_smci_both_as_cn"))
-        requested.append((CN, sMCI, sMCI, "confused_cn_smci_both_as_smci"))
+        requested.append((CN,   sMCI, CN,   "confused_cn_smci_both_as_cn"))
+        requested.append((CN,   sMCI, sMCI, "confused_cn_smci_both_as_smci"))
     if None not in (pMCI, AD):
-        requested.append((pMCI, AD, AD,   "confused_pmci_ad_both_as_ad"))
-        requested.append((pMCI, AD, pMCI, "confused_pmci_ad_both_as_pmci"))
+        requested.append((pMCI, AD,   AD,   "confused_pmci_ad_both_as_ad"))
+        requested.append((pMCI, AD,   pMCI, "confused_pmci_ad_both_as_pmci"))
     if None not in (sMCI, pMCI):
         requested.append((sMCI, pMCI, sMCI, "confused_smci_pmci_both_as_smci"))
 
-    mri_cmaps  = ["gray",  "bone",  "gray",  "bone",  "gray"]
-    pet_cmaps  = ["hot",   "hot",   "hot",   "hot",   "hot"]
-    # per-class accent colours for histograms
+    mri_cmaps  = ["gray", "bone", "gray", "bone", "gray"]
+    pet_cmaps  = ["hot",  "hot",  "hot",  "hot",  "hot"]
     hist_colors = {
         CN:   ACCENT,
         sMCI: GREEN,
@@ -663,11 +644,10 @@ def plot_misclassification_comparison(buckets, class_names, save_dir):
 
     for idx_req, (true_a, true_b, pred_cls, tag) in enumerate(requested):
 
-        # bucket key: (true_class, predicted_class)
-        sample_a = buckets.get((true_a, pred_cls), [])
-        sample_b = buckets.get((true_b, pred_cls), [])
+        samples_a = buckets.get((true_a, pred_cls), [])
+        samples_b = buckets.get((true_b, pred_cls), [])
 
-        if not sample_a or not sample_b:
+        if not samples_a or not samples_b:
             name_a = class_names[true_a]
             name_b = class_names[true_b]
             pred_n = class_names[pred_cls]
@@ -675,8 +655,10 @@ def plot_misclassification_comparison(buckets, class_names, save_dir):
                   f"{name_a}→{pred_n} and {name_b}→{pred_n} both exist")
             continue
 
-        s_a    = sample_a[0]   # take the first stored sample for class A
-        s_b    = sample_b[0]   # take the first stored sample for class B
+        # ── take up to max_samples from each side ──────────────────────────
+        samples_a = samples_a[:max_samples]
+        samples_b = samples_b[:max_samples]
+        n_rows = max(len(samples_a), len(samples_b))   # rows = whichever side has more
 
         name_a = class_names[true_a]
         name_b = class_names[true_b]
@@ -685,35 +667,49 @@ def plot_misclassification_comparison(buckets, class_names, save_dir):
         mri_cmap = mri_cmaps[idx_req % len(mri_cmaps)]
         pet_cmap = pet_cmaps[idx_req % len(pet_cmaps)]
 
-        # ── 8-column figure ────────────────────────────────────────────────
-        fig, axes = plt.subplots(1, 8, figsize=(24, 4))
+        # ── n_rows rows × 8 cols ───────────────────────────────────────────
+        fig, axes_grid = plt.subplots(n_rows, 8, figsize=(24, 4 * n_rows))
         fig.patch.set_facecolor(BACKGROUND)
-        for ax in axes:
-            ax.set_facecolor(SURFACE)
+
+        # Normalise to always be 2-D (n_rows, 8) even when n_rows == 1
+        if n_rows == 1:
+            axes_grid = axes_grid[np.newaxis, :]
 
         fig.suptitle(
             f"Both predicted as  {pred_n}  "
-            f"(left: true {name_a} | right: true {name_b})\n"
-            f"Subject {name_a}: ID={s_a['subject_id']}  conf={s_a['conf']:.2f}   "
-            f"Subject {name_b}: ID={s_b['subject_id']}  conf={s_b['conf']:.2f}",
-            fontsize=10, color=TEXT, y=1.02,
+            f"(left cols: true {name_a}  |  right cols: true {name_b})",
+            fontsize=11, color=TEXT, y=1.01,
         )
 
-        # columns 0-1 : MRI of class A + its histogram
-        _draw_image_and_hist(axes, 0, s_a["mri"], "MRI", name_a,
-                             mri_cmap, hist_colors.get(true_a, ACCENT))
+        for row in range(n_rows):
+            axes = axes_grid[row]
 
-        # columns 2-3 : PET of class A + its histogram
-        _draw_image_and_hist(axes, 2, s_a["pet"], "PET", name_a,
-                             pet_cmap, hist_colors.get(true_a, ACCENT))
+            # ── left side: class A sample (or blank if exhausted) ──────────
+            if row < len(samples_a):
+                s_a = samples_a[row]
+                _draw_image_and_hist(axes, 0, s_a["mri"], "MRI",
+                                     f"{name_a}  ID={s_a['subject_id']}  conf={s_a['conf']:.2f}",
+                                     mri_cmap, hist_colors.get(true_a, ACCENT))
+                _draw_image_and_hist(axes, 2, s_a["pet"], "PET",
+                                     f"{name_a}  ID={s_a['subject_id']}",
+                                     pet_cmap, hist_colors.get(true_a, ACCENT))
+            else:
+                # blank out unused left-side axes
+                for col in range(4):
+                    axes[col].set_visible(False)
 
-        # columns 4-5 : MRI of class B + its histogram
-        _draw_image_and_hist(axes, 4, s_b["mri"], "MRI", name_b,
-                             mri_cmap, hist_colors.get(true_b, GREEN))
-
-        # columns 6-7 : PET of class B + its histogram
-        _draw_image_and_hist(axes, 6, s_b["pet"], "PET", name_b,
-                             pet_cmap, hist_colors.get(true_b, GREEN))
+            # ── right side: class B sample (or blank if exhausted) ─────────
+            if row < len(samples_b):
+                s_b = samples_b[row]
+                _draw_image_and_hist(axes, 4, s_b["mri"], "MRI",
+                                     f"{name_b}  ID={s_b['subject_id']}  conf={s_b['conf']:.2f}",
+                                     mri_cmap, hist_colors.get(true_b, GREEN))
+                _draw_image_and_hist(axes, 6, s_b["pet"], "PET",
+                                     f"{name_b}  ID={s_b['subject_id']}",
+                                     pet_cmap, hist_colors.get(true_b, GREEN))
+            else:
+                for col in range(4, 8):
+                    axes[col].set_visible(False)
 
         # vertical divider between the two subjects
         fig.add_artist(plt.Line2D(

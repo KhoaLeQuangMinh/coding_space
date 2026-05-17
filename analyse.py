@@ -599,6 +599,7 @@ def plot_misclassification_comparison(buckets, class_names, save_dir, max_sample
         ax_hist = axes[col + 1]
         ax_hist.set_facecolor(SURFACE)
         flat = vol.flatten()
+        flat = flat[flat > 0]          # remove background zeros
         lo, hi = np.percentile(flat, 1), np.percentile(flat, 99)
         clipped = flat[(flat >= lo) & (flat <= hi)]
         ax_hist.hist(clipped, bins=60, color=accent_color,

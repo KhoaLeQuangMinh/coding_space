@@ -633,6 +633,7 @@ def plot_misclassification_comparison(buckets, class_names, save_dir, max_sample
         requested.append((pMCI, AD,   pMCI, "confused_pmci_ad_both_as_pmci"))
     if None not in (sMCI, pMCI):
         requested.append((sMCI, pMCI, sMCI, "confused_smci_pmci_both_as_smci"))
+        requested.append((sMCI, pMCI, pMCI, "confused_smci_pmci_both_as_pmci"))
 
     mri_cmaps  = ["gray", "bone", "gray", "bone", "gray"]
     pet_cmaps  = ["hot",  "hot",  "hot",  "hot",  "hot"]

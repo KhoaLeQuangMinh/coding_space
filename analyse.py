@@ -68,7 +68,7 @@ from src.data          import MRIPETDataset
 from src.baseline_model import BaselineModel
 from src.engine        import build_model, build_criterion
 from src.utils         import set_global_seed
-
+from src.plot_roi_histogram import plot_roi_histograms
 
 # ══════════════════════════════════════════════
 # Palette & global style
@@ -832,6 +832,7 @@ def parse_args():
     p.add_argument("--val_ratio",   type=float, default=0.1)
     p.add_argument("--batch_size",  type=int,   default=4)
     p.add_argument("--num_workers", type=int,   default=4)
+    p.add_argument("--atlas_path", type=str, default = None)
 
     # ── Model ─────────────────────────────────────────────────────────────
     p.add_argument("--model_type",   type=str, default="fusion",
@@ -991,6 +992,19 @@ def main():
     print("  MISCLASSIFICATION COMPARISON  (image + intensity histogram)")
     print("-" * 62 + "\n")
     plot_misclassification_comparison(buckets, args.class_names, save_dir)
+
+    # ── ROI-level histograms using AAL3 atlas ─────────────────────────────
+    print("\n" + "-" * 62)
+    print("  ROI HISTOGRAMS  (per brain region, AAL3 atlas)")
+    print("-" * 62 + "\n")
+    plot_roi_histograms(
+        buckets     = buckets,
+        class_names = args.class_names,
+        save_dir    = save_dir,
+        atlas_path  = args.atlas_path,   # path to your uploaded atlas
+        modality    = "pet",               # or "mri", or call twice for both
+        max_samples = 5,
+    )
 
     # ── Subject log ───────────────────────────────────────────────────────
     save_error_subjects(labels, preds, subjects, args.class_names,

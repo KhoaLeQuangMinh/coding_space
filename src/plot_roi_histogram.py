@@ -250,20 +250,12 @@ def _resample_atlas(atlas, target_shape):
 # ── Single-ROI histogram helper ──────────────────────────────────────────────
 
 def _roi_hist(ax, vol, mask, color, label, bins=40):
-    """
-    Draw a histogram of vol[mask] into ax.
-    Skips gracefully if the ROI has no voxels after masking.
-    Returns mean value or None.
-    """
-    vox = vol[mask]
+    vox = vol[mask]    # atlas mask already excludes background — no threshold needed
     if vox.size == 0:
         ax.text(0.5, 0.5, "no voxels", ha="center", va="center",
                 transform=ax.transAxes, color=TEXT_DIM, fontsize=6)
         return None
 
-    # Remove near-zero background
-    threshold = vox.max() * 0.05
-    vox = vox[vox > threshold]
     if vox.size < 5:
         ax.text(0.5, 0.5, "sparse", ha="center", va="center",
                 transform=ax.transAxes, color=TEXT_DIM, fontsize=6)

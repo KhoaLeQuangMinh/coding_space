@@ -209,13 +209,22 @@ GROUP_TITLES = {
 
 def _load_atlas(atlas_path):
     """
-    Load AAL3 atlas from a .nii.gz file without nibabel.
-    Returns (atlas_data: np.ndarray int16, shape=(91,109,91))
+    Load AAL3 atlas from a .nii.gz or plain .nii file without nibabel.
+    Returns (atlas_data: np.ndarray int32, shape=(91,109,91))
+    Auto-detects gzip vs raw by peeking at the first two bytes.
     """
-    with gzip.open(atlas_path, "rb") as f:
-        raw = f.read()
+    atlas_path = Path(atlas_path)
+    with open(atlas_path, "rb") as f:
+        magic = f.read(2)
 
-    # NIfTI-1, big-endian (detected from header)
+    if magic == b"\x1f\x8b":          # gzip magic bytes
+        with gzip.open(atlas_path, "rb") as f:
+            raw = f.read()
+    else:                              # plain uncompressed .nii
+        with open(atlas_path, "rb") as f:
+            raw = f.read()
+
+    # NIfTI-1, big-endian (verified from header of this specific atlas)
     nx, ny, nz = 91, 109, 91
     offset = 352
     atlas = (

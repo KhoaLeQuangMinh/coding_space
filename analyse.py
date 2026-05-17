@@ -559,6 +559,173 @@ def plot_confused_pairs(buckets, class_names, save_dir, max_samples=3):
         _savefig(fig, save_dir / f"{tag}.png")
 
 
+def plot_misclassification_comparison(buckets, class_names, save_dir):
+    """
+    For each requested confusion pair, produce one figure where two subjects
+    are shown side-by-side — one from each true class — but both were
+    predicted as the same (wrong) class.
+
+    Layout per figure  (8 columns):
+    ┌──────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
+    │ MRI      │ MRI      │ PET      │ PET      │ MRI      │ MRI      │ PET      │ PET      │
+    │ class A  │ hist     │ class A  │ hist     │ class B  │ hist     │ class B  │ hist     │
+    └──────────┴──────────┴──────────┴──────────┴──────────┴──────────┴──────────┴──────────┘
+
+    Both subjects were predicted as `pred_cls`.
+
+    Requested pairs
+    ---------------
+    (CN,   sMCI) both predicted as CN        → confused_cn_smci_both_as_cn.png
+    (CN,   sMCI) both predicted as sMCI      → confused_cn_smci_both_as_smci.png
+    (pMCI, AD)   both predicted as AD        → confused_pmci_ad_both_as_ad.png
+    (pMCI, AD)   both predicted as pMCI      → confused_pmci_ad_both_as_pmci.png
+    (sMCI, pMCI) both predicted as sMCI      → confused_smci_pmci_both_as_smci.png
+
+    Gracefully skipped if either bucket is empty (not enough misclassified
+    samples for a given pair exist in the test set).
+    """
+
+    def _vol_to_slice(tensor):
+        """Axial mid-slice, shape (H, W), from (1, H, W, D) or (H, W, D)."""
+        vol = tensor.squeeze(0).numpy()
+        return np.rot90(vol[:, :, vol.shape[2] // 2])
+
+    def _draw_image_and_hist(axes, col, volume_tensor, modality_label,
+                             class_label, img_cmap, accent_color):
+        """
+        Fill two adjacent axes (axes[col], axes[col+1]) with:
+          left  — axial mid-slice of the volume
+          right — intensity histogram of the full 3-D volume
+        """
+        vol    = volume_tensor.squeeze(0).numpy()          # (H, W, D)
+        slc    = np.rot90(vol[:, :, vol.shape[2] // 2])   # axial mid-slice
+
+        # ── image ──────────────────────────────────────────────────────────
+        ax_img = axes[col]
+        ax_img.imshow(slc, cmap=img_cmap, aspect="equal")
+        ax_img.set_title(f"{modality_label}\n{class_label}",
+                         color=TEXT, fontsize=8, pad=4)
+        ax_img.axis("off")
+        ax_img.set_facecolor(SURFACE)
+
+        # ── histogram ──────────────────────────────────────────────────────
+        ax_hist = axes[col + 1]
+        ax_hist.set_facecolor(SURFACE)
+        flat = vol.flatten()
+        # clip extreme tails for readability (1st–99th percentile)
+        lo, hi = np.percentile(flat, 1), np.percentile(flat, 99)
+        clipped = flat[(flat >= lo) & (flat <= hi)]
+        ax_hist.hist(clipped, bins=60, color=accent_color,
+                     alpha=0.85, edgecolor=BACKGROUND, linewidth=0.3)
+        ax_hist.axvline(clipped.mean(), color=TEXT, linestyle="--",
+                        linewidth=1, label=f"μ={clipped.mean():.3f}")
+        ax_hist.set_xlabel("Intensity", color=TEXT_DIM, fontsize=7)
+        ax_hist.set_ylabel("Count",     color=TEXT_DIM, fontsize=7)
+        ax_hist.tick_params(colors=TEXT_DIM, labelsize=6)
+        ax_hist.set_title(f"Histogram\n{class_label}",
+                          color=TEXT, fontsize=8, pad=4)
+        ax_hist.legend(fontsize=6, loc="upper right")
+        ax_hist.grid(axis="y", alpha=0.3)
+        for spine in ax_hist.spines.values():
+            spine.set_edgecolor(BORDER)
+
+    # ── define the five requested pairs ────────────────────────────────────
+    # Each entry: (true_cls_A, true_cls_B, pred_cls, filename_tag)
+    # true_cls_A and true_cls_B are indices into class_names.
+    # pred_cls is also an index — both subjects must have been predicted as this.
+    def _idx(name):
+        try:
+            return class_names.index(name)
+        except ValueError:
+            return None   # class not present in this experiment's class_names
+
+    CN, sMCI, pMCI, AD = _idx("CN"), _idx("sMCI"), _idx("pMCI"), _idx("AD")
+
+    requested = []
+    if None not in (CN, sMCI):
+        requested.append((CN, sMCI, CN,   "confused_cn_smci_both_as_cn"))
+        requested.append((CN, sMCI, sMCI, "confused_cn_smci_both_as_smci"))
+    if None not in (pMCI, AD):
+        requested.append((pMCI, AD, AD,   "confused_pmci_ad_both_as_ad"))
+        requested.append((pMCI, AD, pMCI, "confused_pmci_ad_both_as_pmci"))
+    if None not in (sMCI, pMCI):
+        requested.append((sMCI, pMCI, sMCI, "confused_smci_pmci_both_as_smci"))
+
+    mri_cmaps  = ["gray",  "bone",  "gray",  "bone",  "gray"]
+    pet_cmaps  = ["hot",   "hot",   "hot",   "hot",   "hot"]
+    # per-class accent colours for histograms
+    hist_colors = {
+        CN:   ACCENT,
+        sMCI: GREEN,
+        pMCI: YELLOW,
+        AD:   RED,
+    }
+
+    for idx_req, (true_a, true_b, pred_cls, tag) in enumerate(requested):
+
+        # bucket key: (true_class, predicted_class)
+        sample_a = buckets.get((true_a, pred_cls), [])
+        sample_b = buckets.get((true_b, pred_cls), [])
+
+        if not sample_a or not sample_b:
+            name_a = class_names[true_a]
+            name_b = class_names[true_b]
+            pred_n = class_names[pred_cls]
+            print(f"  [skip] {tag}: no samples found where "
+                  f"{name_a}→{pred_n} and {name_b}→{pred_n} both exist")
+            continue
+
+        s_a    = sample_a[0]   # take the first stored sample for class A
+        s_b    = sample_b[0]   # take the first stored sample for class B
+
+        name_a = class_names[true_a]
+        name_b = class_names[true_b]
+        pred_n = class_names[pred_cls]
+
+        mri_cmap = mri_cmaps[idx_req % len(mri_cmaps)]
+        pet_cmap = pet_cmaps[idx_req % len(pet_cmaps)]
+
+        # ── 8-column figure ────────────────────────────────────────────────
+        fig, axes = plt.subplots(1, 8, figsize=(24, 4))
+        fig.patch.set_facecolor(BACKGROUND)
+        for ax in axes:
+            ax.set_facecolor(SURFACE)
+
+        fig.suptitle(
+            f"Both predicted as  {pred_n}  "
+            f"(left: true {name_a} | right: true {name_b})\n"
+            f"Subject {name_a}: ID={s_a['subject_id']}  conf={s_a['conf']:.2f}   "
+            f"Subject {name_b}: ID={s_b['subject_id']}  conf={s_b['conf']:.2f}",
+            fontsize=10, color=TEXT, y=1.02,
+        )
+
+        # columns 0-1 : MRI of class A + its histogram
+        _draw_image_and_hist(axes, 0, s_a["mri"], "MRI", name_a,
+                             mri_cmap, hist_colors.get(true_a, ACCENT))
+
+        # columns 2-3 : PET of class A + its histogram
+        _draw_image_and_hist(axes, 2, s_a["pet"], "PET", name_a,
+                             pet_cmap, hist_colors.get(true_a, ACCENT))
+
+        # columns 4-5 : MRI of class B + its histogram
+        _draw_image_and_hist(axes, 4, s_b["mri"], "MRI", name_b,
+                             mri_cmap, hist_colors.get(true_b, GREEN))
+
+        # columns 6-7 : PET of class B + its histogram
+        _draw_image_and_hist(axes, 6, s_b["pet"], "PET", name_b,
+                             pet_cmap, hist_colors.get(true_b, GREEN))
+
+        # vertical divider between the two subjects
+        fig.add_artist(plt.Line2D(
+            [0.5, 0.5], [0.0, 1.0],
+            transform=fig.transFigure,
+            color=BORDER, linewidth=1.5, linestyle="--"
+        ))
+
+        plt.tight_layout()
+        _savefig(fig, save_dir / f"{tag}.png")
+
+
 def save_error_subjects(labels, preds, subjects, class_names, save_path):
     errors = {}
     for t, p, s in zip(labels.tolist(), preds.tolist(), subjects):
@@ -669,6 +836,10 @@ def parse_args():
     p.add_argument("--num_workers", type=int,   default=4)
 
     # ── Model ─────────────────────────────────────────────────────────────
+    p.add_argument("--model_type", type=str, default="fusion",
+               choices=["fusion", "mri_only", "pet_only"],
+               help="fusion = both modalities with fusion module, "
+                    "mri_only = MRI unimodal, pet_only = PET unimodal")
     p.add_argument("--fusion_type",  type=str, default="concat",
                    choices=["concat", "sum", "film", "gated", "CrossAttention"])
     p.add_argument("--num_classes",  type=int,  default=4)
@@ -680,13 +851,6 @@ def parse_args():
     # ── Loss (must match what was used at training time) ──────────────────
     p.add_argument("--loss", type=str, default="crossentropy",
                    choices=["crossentropy", "mse", "focal"])
-
-    # ── KFold (must match what was used at training time) ─────────────────
-    p.add_argument("--kfold", type=int, default=0,
-                   help="Number of folds used at training time. 0 = single split.")
-    p.add_argument("--fold",  type=int, default=None,
-                   help="Which fold checkpoint to load (1-based). "
-                        "Defaults to the best fold, but you can specify any fold.")
 
     # ── Analysis ──────────────────────────────────────────────────────────
     p.add_argument("--split",        type=str, default="test",
@@ -718,56 +882,27 @@ def main():
     print(f"  Output dir : {save_dir}")
     print(f"{'='*62}\n")
 
-    # ── Dataset & split reconstruction ────────────────────────────────────
-    # IMPORTANT: must use the exact same split logic as train.py so the
-    # test indices are identical to what the model never saw during training.
-    dataset = MRIPETDataset(root=args.data_root)
+    # ── Dataset ───────────────────────────────────────────────────────────
+    dataset   = MRIPETDataset(root=args.data_root)
+    generator = torch.Generator().manual_seed(args.seed)
 
-    if args.kfold > 0:
-        # KFold mode: replicate the numpy permutation from run_kfold
-        import numpy as _np
-        all_indices   = _np.arange(len(dataset))
-        test_ratio    = 1.0 - args.train_ratio - args.val_ratio
-        test_size     = int(test_ratio * len(dataset))
-        rng           = _np.random.default_rng(args.seed)
-        shuffled      = rng.permutation(all_indices)
-        test_indices  = shuffled[:test_size]
+    train_sz = int(args.train_ratio * len(dataset))
+    val_sz   = int(args.val_ratio   * len(dataset))
+    test_sz  = len(dataset) - train_sz - val_sz
 
-        from torch.utils.data import Subset
-        from src.utils import seed_worker
-        g = torch.Generator().manual_seed(args.seed)
-        chosen_ds = Subset(dataset, test_indices)
-        print(f"  KFold mode — test split: {len(test_indices)} samples "
-              f"(same held-out set as training)\n")
-    else:
-        # Single split: replicate the random_split from run_single
-        generator = torch.Generator().manual_seed(args.seed)
-        train_sz  = int(args.train_ratio * len(dataset))
-        val_sz    = int(args.val_ratio   * len(dataset))
-        test_sz   = len(dataset) - train_sz - val_sz
-        train_ds, val_ds, test_ds = random_split(
-            dataset, [train_sz, val_sz, test_sz], generator=generator
-        )
-        chosen_ds = {"train": train_ds, "val": val_ds, "test": test_ds}[args.split]
-        print(f"  Single-split mode — {args.split}: {len(chosen_ds)} samples\n")
+    train_ds, val_ds, test_ds = random_split(
+        dataset, [train_sz, val_sz, test_sz], generator=generator
+    )
+    chosen_ds = {"train": train_ds, "val": val_ds, "test": test_ds}[args.split]
 
     loader = DataLoader(
         chosen_ds, batch_size=args.batch_size,
         shuffle=False, num_workers=args.num_workers,
     )
+    print(f"  Dataset ({args.split}): {len(chosen_ds)} samples\n")
 
-    # ── Checkpoint path ───────────────────────────────────────────────────
-    # Single split:  [experiment_name].pth
-    # KFold:         [experiment_name_foldN].pth  where N = args.fold
-    if args.kfold > 0:
-        if args.fold is None:
-            raise ValueError(
-                "When --kfold > 0 you must also pass --fold N "
-                "(the fold number printed in the KFold summary as 'Best fold')."
-            )
-        model_path = f"[{args.experiment_name}_fold{args.fold}].pth"
-    else:
-        model_path = f"[{args.experiment_name}].pth"
+    # ── Model ─────────────────────────────────────────────────────────────
+    model_path = f"[{args.experiment_name}].pth"
     if not os.path.exists(model_path):
         raise FileNotFoundError(
             f"Weights not found: {model_path}\n"
@@ -821,6 +956,12 @@ def main():
     print("-" * 62 + "\n")
     plot_confused_pairs(buckets, args.class_names, save_dir,
                         max_samples=args.scan_samples)
+
+    # ── Misclassification comparison (image + histogram side-by-side) ──────
+    print("\n" + "-" * 62)
+    print("  MISCLASSIFICATION COMPARISON  (image + intensity histogram)")
+    print("-" * 62 + "\n")
+    plot_misclassification_comparison(buckets, args.class_names, save_dir)
 
     # ── Subject log ───────────────────────────────────────────────────────
     save_error_subjects(labels, preds, subjects, args.class_names,

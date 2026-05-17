@@ -57,6 +57,10 @@ def parse_args():
     p.add_argument("--num_workers",     type=int,   default=4)
 
     # ── Model ─────────────────────────────────────────────────────────────
+    p.add_argument("--model_type", type=str, default="fusion",
+               choices=["fusion", "mri_only", "pet_only"],
+               help="fusion = both modalities with fusion module, "
+                    "mri_only = MRI unimodal, pet_only = PET unimodal")
     p.add_argument("--fusion_type",  type=str,  default="concat",
                    choices=["concat", "sum", "film", "gated", "CrossAttention"])
     p.add_argument("--num_classes",  type=int,  default=4)
@@ -75,6 +79,7 @@ def parse_args():
     p.add_argument("--device",  type=str, default="cuda:0")
     p.add_argument("--epochs",  type=int, default=40)
     p.add_argument("--seed",    type=int, default=12345)
+    
 
     # ── KFold ─────────────────────────────────────────────────────────────
     p.add_argument("--kfold", type=int, default=0,

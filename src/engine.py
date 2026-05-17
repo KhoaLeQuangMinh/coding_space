@@ -42,13 +42,34 @@ def build_model(args, pretrained_path=None) -> nn.Module:
     """
     out_classes = 1 if args.loss == "mse" else args.num_classes
 
-    model = BaselineModel(
-        fusion_method  = args.fusion_type,
-        out_feature_dim= args.feature_dim,
-        class_num      = out_classes,
-        pretrained     = args.pretrained,
-        pretrained_path= pretrained_path,
-    )
+    if args.model_type == "mri_only":
+        from src.baseline_model import MriOnlyModel
+        model = MriOnlyModel(
+            out_feature_dim = args.feature_dim,
+            class_num       = out_classes,
+            pretrained      = args.pretrained,
+            pretrained_path = pretrained_path,
+        )
+
+    elif args.model_type == "pet_only":
+        from src.baseline_model import PetOnlyModel
+        model = PetOnlyModel(
+            out_feature_dim = args.feature_dim,
+            class_num       = out_classes,
+            pretrained      = args.pretrained,
+            pretrained_path = pretrained_path,
+        )
+
+    else:   # default — original fusion model
+        from src.baseline_model import BaselineModel
+        model = BaselineModel(
+            fusion_method   = args.fusion_type,
+            out_feature_dim = args.feature_dim,
+            class_num       = out_classes,
+            pretrained      = args.pretrained,
+            pretrained_path = pretrained_path,
+        )
+
     return model.to(args.device)
 
 

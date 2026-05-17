@@ -74,3 +74,36 @@ class BaselineModel(nn.Module):
         _, _, output = self.fusion_module(mri_feature, pet_feature)
 
         return output
+    
+class MriOnlyModel(nn.Module):
+    """Unimodal MRI-only baseline."""
+
+    def __init__(self, out_feature_dim=768, class_num=4,
+                 pretrained=False, pretrained_path=None):
+        super(MriOnlyModel, self).__init__()
+        backbone  = create_vit_backbone(pretrained=pretrained,
+                                        pretrained_path=pretrained_path)
+        self.model = MriClassifier(backbone,
+                                   out_feature_dim=out_feature_dim,
+                                   class_num=class_num)
+
+    def forward(self, mri, pet):   # pet is received but ignored
+        _, output = self.model(mri)
+        return output
+
+
+class PetOnlyModel(nn.Module):
+    """Unimodal PET-only baseline."""
+
+    def __init__(self, out_feature_dim=768, class_num=4,
+                 pretrained=False, pretrained_path=None):
+        super(PetOnlyModel, self).__init__()
+        backbone  = create_vit_backbone(pretrained=pretrained,
+                                        pretrained_path=pretrained_path)
+        self.model = PetClassifier(backbone,
+                                   out_feature_dim=out_feature_dim,
+                                   class_num=class_num)
+
+    def forward(self, mri, pet):   # mri is received but ignored
+        _, output = self.model(pet)
+        return output

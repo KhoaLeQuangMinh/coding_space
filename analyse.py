@@ -836,6 +836,9 @@ def parse_args():
     p.add_argument("--num_workers", type=int,   default=4)
 
     # ── Model ─────────────────────────────────────────────────────────────
+    p.add_argument("--model_type",   type=str, default="fusion",
+                   choices=["fusion", "mri_only", "pet_only"],
+                   help="Must match what was used at training time")
     p.add_argument("--fusion_type",  type=str, default="concat",
                    choices=["concat", "sum", "film", "gated", "CrossAttention"])
     p.add_argument("--num_classes",  type=int,  default=4)

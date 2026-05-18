@@ -35,38 +35,46 @@ from src.utils import create_experiment_logger, print_experiment_config
 
 def build_model(args, pretrained_path=None) -> nn.Module:
     """
-    Instantiate a BaselineModel from a flat args namespace.
+    Instantiate a model from a flat args namespace.
 
-    num_classes is set to 1 when loss=='mse' (scalar regression head)
-    and to args.num_classes for every classification loss.
+    model_type controls which architecture is built:
+        "fusion"   — BaselineModel with the chosen fusion_type (default)
+        "mri_only" — MriOnlyModel  (pet input is received but ignored)
+        "pet_only" — PetOnlyModel  (mri input is received but ignored)
+
+    pretrained is only applied when pretrained_path is actually provided.
+    When called from test_model (pretrained_path=None), no backbone weights
+    are loaded — the checkpoint is loaded by the caller immediately after.
     """
     out_classes = 1 if args.loss == "mse" else args.num_classes
+    model_type  = getattr(args, "model_type", "fusion")   # safe default for old args
+    do_pretrain = args.pretrained and (pretrained_path is not None)
 
-    if args.model_type == "mri_only":
+    if model_type == "mri_only":
         from src.baseline_model import MriOnlyModel
         model = MriOnlyModel(
             out_feature_dim = args.feature_dim,
             class_num       = out_classes,
-            pretrained      = args.pretrained,
+            pretrained      = do_pretrain,
             pretrained_path = pretrained_path,
         )
 
-    elif args.model_type == "pet_only":
+    elif model_type == "pet_only":
         from src.baseline_model import PetOnlyModel
         model = PetOnlyModel(
             out_feature_dim = args.feature_dim,
             class_num       = out_classes,
-            pretrained      = args.pretrained,
+            pretrained      = do_pretrain,
             pretrained_path = pretrained_path,
         )
 
-    else:   # default — original fusion model
+    else:   # "fusion" — original joint model
         from src.baseline_model import BaselineModel
         model = BaselineModel(
             fusion_method   = args.fusion_type,
             out_feature_dim = args.feature_dim,
             class_num       = out_classes,
-            pretrained      = args.pretrained,
+            pretrained      = do_pretrain,
             pretrained_path = pretrained_path,
         )
 

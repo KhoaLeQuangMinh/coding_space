@@ -68,7 +68,7 @@ from src.data          import MRIPETDataset
 from src.baseline_model import BaselineModel
 from src.engine        import build_model, build_criterion
 from src.utils         import set_global_seed
-from src.plot_roi_histogram import plot_roi_histograms
+from src.plot_roi_histogram import plot_roi_group_comparison, plot_roi_histograms
 
 # ══════════════════════════════════════════════
 # Palette & global style
@@ -1004,6 +1004,14 @@ def main():
         atlas_path  = args.atlas_path,   # path to your uploaded atlas
         modality    = "pet",               # or "mri", or call twice for both
         max_samples = 5,
+    )
+
+    plot_roi_group_comparison(
+        buckets     = buckets,
+        class_names = args.class_names,
+        save_dir    = save_dir,
+        atlas_path  = args.atlas_path,   # path to your uploaded atlas
+        modality    = "pet",
     )
 
     # ── Subject log ───────────────────────────────────────────────────────

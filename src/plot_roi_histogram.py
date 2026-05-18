@@ -250,12 +250,20 @@ def _resample_atlas(atlas, target_shape):
 # ── Single-ROI histogram helper ──────────────────────────────────────────────
 
 def _roi_hist(ax, vol, mask, color, label, bins=40):
-    vox = vol[mask]    # atlas mask already excludes background — no threshold needed
+    """
+    Draw a histogram of vol[mask] into ax.
+    Skips gracefully if the ROI has no voxels after masking.
+    Returns mean value or None.
+    """
+    vox = vol[mask]
     if vox.size == 0:
         ax.text(0.5, 0.5, "no voxels", ha="center", va="center",
                 transform=ax.transAxes, color=TEXT_DIM, fontsize=6)
         return None
 
+    # Remove near-zero background
+    # threshold = vox.max() * 0.05
+    # vox = vox[vox > threshold]
     if vox.size < 5:
         ax.text(0.5, 0.5, "sparse", ha="center", va="center",
                 transform=ax.transAxes, color=TEXT_DIM, fontsize=6)
@@ -438,6 +446,263 @@ def plot_roi_histograms(
                        labelcolor=TEXT, bbox_to_anchor=(0.5, -0.01))
 
             plt.tight_layout(rect=[0, 0.03, 1, 1])
+            out_path = save_dir / f"{base_tag}_{modality}_{group_key}.png"
+            fig.savefig(out_path, dpi=130, bbox_inches="tight",
+                        facecolor=BACKGROUND)
+            plt.close(fig)
+            print(f"  Saved → {out_path}")
+
+
+# ── Group-level ROI comparison ───────────────────────────────────────────────
+
+def plot_roi_group_comparison(
+    buckets,
+    class_names,
+    save_dir,
+    atlas_path,
+    modality="pet",
+    roi_group=None,
+):
+    """
+    For each confusion pair, collect per-ROI mean intensity across ALL subjects
+    of each class (not just within pairs), then produce a grouped strip+boxplot
+    per ROI showing class A vs class B as two separate distributions.
+
+    This is statistically valid because:
+      - All class-A subjects in the bucket share the same misclassification
+        condition, so they form a comparable group.
+      - All class-B subjects likewise form a comparable group.
+      - Any subject from group A can be compared to any subject from group B.
+
+    For each ROI a Mann-Whitney U test is run (non-parametric, appropriate for
+    small n). ROIs are sorted by effect size (absolute Cohen's d) so the most
+    discriminative regions appear first.
+
+    Output files
+    ------------
+      roigrp_<modality>_<pair_tag>_<lobe>.png
+
+    Each figure: one subplot per ROI (sorted by separation), showing:
+      - Box + whisker for each class group
+      - Individual subject dots (strip plot) overlaid
+      - p-value annotation (Mann-Whitney U)
+      - Effect size (Cohen's d)
+    """
+    from scipy.stats import mannwhitneyu
+
+    save_dir  = Path(save_dir)
+    atlas_raw = _load_atlas(atlas_path)
+
+    hist_colors = {0: ACCENT, 1: GREEN, 2: YELLOW, 3: RED}
+
+    def _idx(name):
+        try:    return class_names.index(name)
+        except: return None
+
+    CN, sMCI, pMCI, AD = _idx("CN"), _idx("sMCI"), _idx("pMCI"), _idx("AD")
+
+    requested = []
+    if None not in (CN, sMCI):
+        requested.append((CN,   sMCI, CN,   "roigrp_cn_smci_as_cn"))
+        requested.append((CN,   sMCI, sMCI, "roigrp_cn_smci_as_smci"))
+    if None not in (pMCI, AD):
+        requested.append((pMCI, AD,   AD,   "roigrp_pmci_ad_as_ad"))
+        requested.append((pMCI, AD,   pMCI, "roigrp_pmci_ad_as_pmci"))
+    if None not in (sMCI, pMCI):
+        requested.append((sMCI, pMCI, sMCI, "roigrp_smci_pmci_as_smci"))
+        requested.append((sMCI, pMCI, pMCI, "roigrp_smci_pmci_as_pmci"))
+
+    groups_to_plot = (
+        {roi_group: ROI_GROUPS[roi_group]}
+        if roi_group is not None
+        else ROI_GROUPS
+    )
+
+    def _roi_mean(vol, mask):
+        """Mean intensity of vol inside mask after percentile clipping."""
+        vox = vol[mask]
+        if vox.size < 5:
+            return np.nan
+        lo, hi = np.percentile(vox, 1), np.percentile(vox, 99)
+        vox = vox[(vox >= lo) & (vox <= hi)]
+        return float(vox.mean()) if vox.size >= 3 else np.nan
+
+    def _cohens_d(a, b):
+        a, b = np.array(a), np.array(b)
+        if len(a) < 2 or len(b) < 2:
+            return 0.0
+        pooled_std = np.sqrt((a.std(ddof=1)**2 + b.std(ddof=1)**2) / 2)
+        return float((a.mean() - b.mean()) / (pooled_std + 1e-9))
+
+    def _pval_str(p):
+        if p < 0.001: return "p<0.001"
+        if p < 0.01:  return "p<0.01"
+        if p < 0.05:  return "p<0.05"
+        return f"p={p:.2f}"
+
+    for true_a, true_b, pred_cls, base_tag in requested:
+
+        all_a = buckets.get((true_a, pred_cls), [])
+        all_b = buckets.get((true_b, pred_cls), [])
+
+        if not all_a or not all_b:
+            print(f"  [skip roigrp] {base_tag}: empty bucket")
+            continue
+
+        name_a = class_names[true_a]
+        name_b = class_names[true_b]
+        pred_n = class_names[pred_cls]
+        col_a  = hist_colors.get(true_a, ACCENT)
+        col_b  = hist_colors.get(true_b, GREEN)
+
+        # Prepare resampled atlas once using first sample's shape
+        vol0  = all_a[0][modality].squeeze(0).numpy()
+        atlas = _resample_atlas(atlas_raw, vol0.shape)
+
+        for group_key, label_list in groups_to_plot.items():
+
+            valid_labels = [l for l in label_list
+                            if l in AAL3_LABELS and np.any(atlas == l)]
+            if not valid_labels:
+                continue
+
+            # ── Collect per-subject ROI means across ALL subjects ────────────
+            means_a = {l: [] for l in valid_labels}
+            means_b = {l: [] for l in valid_labels}
+
+            for sample in all_a:
+                vol = sample[modality].squeeze(0).numpy()
+                atl = _resample_atlas(atlas_raw, vol.shape) if vol.shape != atlas.shape else atlas
+                for l in valid_labels:
+                    means_a[l].append(_roi_mean(vol, atl == l))
+
+            for sample in all_b:
+                vol = sample[modality].squeeze(0).numpy()
+                atl = _resample_atlas(atlas_raw, vol.shape) if vol.shape != atlas.shape else atlas
+                for l in valid_labels:
+                    means_b[l].append(_roi_mean(vol, atl == l))
+
+            # ── Stats per ROI ────────────────────────────────────────────────
+            roi_stats = []
+            for l in valid_labels:
+                a_vals = [v for v in means_a[l] if not np.isnan(v)]
+                b_vals = [v for v in means_b[l] if not np.isnan(v)]
+                if len(a_vals) < 2 or len(b_vals) < 2:
+                    continue
+                d = _cohens_d(a_vals, b_vals)
+                try:
+                    _, p = mannwhitneyu(a_vals, b_vals, alternative="two-sided")
+                except Exception:
+                    p = 1.0
+                roi_stats.append((l, a_vals, b_vals, d, p))
+
+            if not roi_stats:
+                continue
+
+            # Sort by |Cohen's d| descending — most discriminative first
+            roi_stats.sort(key=lambda x: abs(x[3]), reverse=True)
+
+            n_rois     = len(roi_stats)
+            n_cols     = min(n_rois, 12)
+            n_rows_fig = int(np.ceil(n_rois / n_cols))
+
+            fig, axes = plt.subplots(
+                n_rows_fig, n_cols,
+                figsize=(n_cols * 2.2, n_rows_fig * 3.2),
+                squeeze=False,
+            )
+            fig.patch.set_facecolor(BACKGROUND)
+            fig.suptitle(
+                f"{GROUP_TITLES[group_key]}  —  {modality.upper()}  group comparison\n"
+                f"Both predicted as {pred_n}  |  "
+                f"{name_a} n={len(all_a)}   {name_b} n={len(all_b)}  |  "
+                f"sorted by |Cohen's d| ↓",
+                fontsize=9, color=TEXT, y=1.02,
+            )
+
+            for idx, (lbl, a_vals, b_vals, d, p) in enumerate(roi_stats):
+                row_i = idx // n_cols
+                col_i = idx % n_cols
+                ax    = axes[row_i, col_i]
+                ax.set_facecolor(SURFACE)
+                for spine in ax.spines.values():
+                    spine.set_edgecolor(BORDER)
+                ax.tick_params(colors=TEXT_DIM, labelsize=6)
+
+                # ── Boxplot ──────────────────────────────────────────────────
+                bp = ax.boxplot(
+                    [a_vals, b_vals],
+                    positions=[0, 1],
+                    widths=0.35,
+                    patch_artist=True,
+                    medianprops=dict(color=TEXT, linewidth=1.5),
+                    whiskerprops=dict(color=TEXT_DIM, linewidth=1),
+                    capprops=dict(color=TEXT_DIM, linewidth=1),
+                    flierprops=dict(marker="o", markersize=3,
+                                   markerfacecolor=TEXT_DIM, alpha=0.5),
+                    boxprops=dict(linewidth=0.8),
+                )
+                bp["boxes"][0].set_facecolor(col_a + "55")
+                bp["boxes"][0].set_edgecolor(col_a)
+                bp["boxes"][1].set_facecolor(col_b + "55")
+                bp["boxes"][1].set_edgecolor(col_b)
+
+                # ── Strip plot ───────────────────────────────────────────────
+                np.random.seed(42)
+                jitter_a = np.random.uniform(-0.08, 0.08, len(a_vals))
+                jitter_b = np.random.uniform(-0.08, 0.08, len(b_vals))
+                ax.scatter(0 + jitter_a, a_vals, color=col_a,
+                           s=22, zorder=5, alpha=0.9, edgecolors="none")
+                ax.scatter(1 + jitter_b, b_vals, color=col_b,
+                           s=22, zorder=5, alpha=0.9, edgecolors="none")
+
+                # ── Significance bar ─────────────────────────────────────────
+                all_vals = a_vals + b_vals
+                y_max    = max(all_vals)
+                y_min    = min(all_vals)
+                y_range  = max(y_max - y_min, 1e-9)
+                bar_y    = y_max + y_range * 0.10
+                sig_color = RED if p < 0.05 else TEXT_DIM
+                ax.plot([0, 1], [bar_y, bar_y], color=sig_color, linewidth=0.8)
+                ax.text(0.5, bar_y + y_range * 0.05,
+                        _pval_str(p), ha="center", va="bottom",
+                        fontsize=5.5, color=sig_color)
+
+                # ── Title with effect size coloured by magnitude ─────────────
+                roi_name = AAL3_LABELS[lbl]
+                if abs(d) > 0.8:   d_color = RED
+                elif abs(d) > 0.5: d_color = YELLOW
+                else:              d_color = TEXT_DIM
+
+                ax.set_title(f"{roi_name}\nd={d:.2f}",
+                             color=TEXT, fontsize=6, pad=2)
+                ax.set_xticks([0, 1])
+                ax.set_xticklabels([name_a[:4], name_b[:4]], fontsize=6,
+                                   color=TEXT_DIM)
+                ax.set_ylabel("mean intensity" if col_i == 0 else "",
+                              color=TEXT_DIM, fontsize=5.5)
+                ax.set_xlim(-0.5, 1.5)
+                ax.grid(axis="y", alpha=0.2, color=BORDER)
+
+            # Hide unused axes
+            for extra in range(len(roi_stats), n_rows_fig * n_cols):
+                axes[extra // n_cols, extra % n_cols].set_visible(False)
+
+            # Legend
+            legend_patches = [
+                mpatches.Patch(color=col_a, alpha=0.8,
+                               label=f"True {name_a} → pred {pred_n}  (n={len(all_a)})"),
+                mpatches.Patch(color=col_b, alpha=0.8,
+                               label=f"True {name_b} → pred {pred_n}  (n={len(all_b)})"),
+                mpatches.Patch(color=RED,     alpha=0.8, label="p < 0.05"),
+                mpatches.Patch(color=TEXT_DIM, alpha=0.6, label="p ≥ 0.05"),
+            ]
+            fig.legend(handles=legend_patches, loc="lower center",
+                       ncol=4, fontsize=7,
+                       facecolor=SURFACE, edgecolor=BORDER,
+                       labelcolor=TEXT, bbox_to_anchor=(0.5, -0.02))
+
+            plt.tight_layout(rect=[0, 0.04, 1, 1])
             out_path = save_dir / f"{base_tag}_{modality}_{group_key}.png"
             fig.savefig(out_path, dpi=130, bbox_inches="tight",
                         facecolor=BACKGROUND)

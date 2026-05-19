@@ -8,3 +8,4 @@ wandb/
 outputs/
 .ipynb_checkpoints/
 .DS_Store
+mri_pet_bl_focal_output/

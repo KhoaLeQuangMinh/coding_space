@@ -455,14 +455,14 @@ class BrainViewer:
         sx, sy, sz = self.sx, self.sy, self.sz
 
         if plane == "axial":
-            mri_sl = np.rot90(self.mri_vol[:, :, sz])
-            pet_sl = np.rot90(self.pet_vol[:, :, sz])
+            mri_sl = self.mri_vol[:, :, sz]
+            pet_sl = self.pet_vol[:, :, sz]
         elif plane == "sagittal":
-            mri_sl = np.rot90(self.mri_vol[sx, :, :])
-            pet_sl = np.rot90(self.pet_vol[sx, :, :])
+            mri_sl = self.mri_vol[sx, :, :]
+            pet_sl = self.pet_vol[sx, :, :]
         else:  # coronal
-            mri_sl = np.rot90(self.mri_vol[:, sy, :])
-            pet_sl = np.rot90(self.pet_vol[:, sy, :])
+            mri_sl = self.mri_vol[:, sy, :]
+            pet_sl = self.pet_vol[:, sy, :]
 
         def _norm(x):
             lo, hi = x.min(), x.max()
@@ -503,9 +503,9 @@ class BrainViewer:
             if old_im is None:
                 ax.axis("off")
                 if cmap:
-                    h = ax.imshow(img, cmap=cmap, origin="lower", aspect="equal")
+                    h = ax.imshow(img, cmap=cmap, origin="upper", aspect="equal")
                 else:
-                    h = ax.imshow(img, origin="lower", aspect="equal")
+                    h = ax.imshow(img, origin="upper", aspect="equal")
             else:
                 old_im.set_data(img)
                 if cmap:
@@ -533,19 +533,19 @@ class BrainViewer:
 
         kw = dict(color=ACCENT, alpha=0.5, linewidth=0.8, linestyle="--")
 
-        # Axial slice: x-axis = X (rows→H), y-axis = Y (cols→W)
+        # Axial slice: image is vol[:, :, sz]  → xaxis=W(col=sy), yaxis=H(row=sx)
         lh = self.ax_axial.axhline(sx, **kw)
         lv = self.ax_axial.axvline(sy, **kw)
         self._ch_lines[self.ax_axial] = [lh, lv]
 
-        # Sagittal slice: axes are Y (cols→W), Z (rows→D)
-        lh = self.ax_sagittal.axhline(sz, **kw)
-        lv = self.ax_sagittal.axvline(sy, **kw)
+        # Sagittal slice: image is vol[sx, :, :] → xaxis=D(col=sz), yaxis=W(row=sy)
+        lh = self.ax_sagittal.axhline(sy, **kw)
+        lv = self.ax_sagittal.axvline(sz, **kw)
         self._ch_lines[self.ax_sagittal] = [lh, lv]
 
-        # Coronal slice: axes are X (rows→H), Z (rows→D)
-        lh = self.ax_coronal.axhline(sz, **kw)
-        lv = self.ax_coronal.axvline(sx, **kw)
+        # Coronal slice: image is vol[:, sy, :] → xaxis=D(col=sz), yaxis=H(row=sx)
+        lh = self.ax_coronal.axhline(sx, **kw)
+        lv = self.ax_coronal.axvline(sz, **kw)
         self._ch_lines[self.ax_coronal] = [lh, lv]
 
     def _update_status(self):
@@ -689,18 +689,21 @@ class BrainViewer:
 
     def _set_crosshair_from_click(self, event):
         H, W, D = self.mri_vol.shape
-        col = int(np.clip(round(event.xdata), 0, max(H, W, D) - 1))
-        row = int(np.clip(round(event.ydata), 0, max(H, W, D) - 1))
+        col = round(event.xdata)
+        row = round(event.ydata)
 
         if event.inaxes == self.ax_axial:
-            self.sy = col
-            self.sx = row
+            # axial: image is vol[:, :, sz] → row=H axis, col=W axis
+            self.sx = int(np.clip(row, 0, H - 1))
+            self.sy = int(np.clip(col, 0, W - 1))
         elif event.inaxes == self.ax_sagittal:
-            self.sy = col
-            self.sz = row
+            # sagittal: image is vol[sx, :, :] → row=W axis, col=D axis
+            self.sy = int(np.clip(row, 0, W - 1))
+            self.sz = int(np.clip(col, 0, D - 1))
         elif event.inaxes == self.ax_coronal:
-            self.sx = col
-            self.sz = row
+            # coronal: image is vol[:, sy, :] → row=H axis, col=D axis
+            self.sx = int(np.clip(row, 0, H - 1))
+            self.sz = int(np.clip(col, 0, D - 1))
 
         self._clamp_slices()
         self._redraw_slices()
@@ -737,22 +740,28 @@ class BrainViewer:
 
         self._last_hover = now
 
-        # Convert 2-D mouse position to 3-D voxel coordinate
-        col = int(np.clip(round(event.xdata), 0, self.mri_vol.shape[1] - 1))
-        row = int(np.clip(round(event.ydata), 0, self.mri_vol.shape[0] - 1))
-
         H, W, D = self.mri_vol.shape
 
-        if event.inaxes == self.ax_axial:
-            vx, vy, vz = row, col, self.sz
-        elif event.inaxes == self.ax_sagittal:
-            vx, vy, vz = self.sx, col, row
-        else:  # coronal
-            vx, vy, vz = col, self.sy, row
+        # event.xdata = column index (X axis of image = second dim of displayed slice)
+        # event.ydata = row index    (Y axis of image = first  dim of displayed slice)
+        col = round(event.xdata)
+        row = round(event.ydata)
 
-        vx = int(np.clip(vx, 0, H - 1))
-        vy = int(np.clip(vy, 0, W - 1))
-        vz = int(np.clip(vz, 0, D - 1))
+        if event.inaxes == self.ax_axial:
+            # axial slice: image is vol[:, :, sz]  → row=H axis, col=W axis
+            vx = int(np.clip(row, 0, H - 1))
+            vy = int(np.clip(col, 0, W - 1))
+            vz = self.sz
+        elif event.inaxes == self.ax_sagittal:
+            # sagittal slice: image is vol[sx, :, :] → row=W axis, col=D axis
+            vx = self.sx
+            vy = int(np.clip(row, 0, W - 1))
+            vz = int(np.clip(col, 0, D - 1))
+        else:  # coronal
+            # coronal slice: image is vol[:, sy, :] → row=H axis, col=D axis
+            vx = int(np.clip(row, 0, H - 1))
+            vy = self.sy
+            vz = int(np.clip(col, 0, D - 1))
 
         roi_name = roi_label_at(self.atlas_cached, vx, vy, vz)
 

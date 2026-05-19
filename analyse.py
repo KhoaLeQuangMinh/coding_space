@@ -1006,12 +1006,29 @@ def main():
         max_samples = 5,
     )
 
+    plot_roi_histograms(
+        buckets     = buckets,
+        class_names = args.class_names,
+        save_dir    = save_dir,
+        atlas_path  = args.atlas_path,   # path to your uploaded atlas
+        modality    = "mri",               # or "mri", or call twice for both
+        max_samples = 5,
+    )
+
     plot_roi_group_comparison(
         buckets     = buckets,
         class_names = args.class_names,
         save_dir    = save_dir,
         atlas_path  = args.atlas_path,   # path to your uploaded atlas
         modality    = "pet",
+    )
+
+    plot_roi_group_comparison(
+        buckets     = buckets,
+        class_names = args.class_names,
+        save_dir    = save_dir,
+        atlas_path  = args.atlas_path,   # path to your uploaded atlas
+        modality    = "mri",
     )
 
     # ── Subject log ───────────────────────────────────────────────────────

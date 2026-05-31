@@ -168,7 +168,7 @@ def train(train_loader, val_loader, args, pretrained_path=None):
     if getattr(args, "resume", False):
         if os.path.exists(checkpoint_path):
             print(f"Resuming training from checkpoint: {checkpoint_path}")
-            checkpoint = torch.load(checkpoint_path, map_location=args.device)
+            checkpoint = torch.load(checkpoint_path, map_location=args.device, weights_only=False)
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             scheduler.load_state_dict(checkpoint['scheduler_state_dict'])

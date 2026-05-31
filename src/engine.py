@@ -13,6 +13,7 @@ build_criterion(args)             -> (criterion_fn, decode_fn) or (criterion_fn)
 train(train_loader, val_loader, args, pretrained_path)
 """
 
+import os
 from sklearn.metrics import (
     accuracy_score, f1_score, recall_score,
     classification_report, confusion_matrix,
@@ -149,8 +150,20 @@ def train(train_loader, val_loader, args, pretrained_path=None):
 
     best_f1    = 0.0
     model_path = f"[{args.experiment_name}].pth"
+    checkpoint_path = os.path.join("outputs", "runs", args.experiment_name, "checkpoint_latest.pth")
+    start_epoch = 0
 
-    for epoch in range(args.epochs):
+    if getattr(args, "resume", False) and os.path.exists(checkpoint_path):
+        print(f"Resuming training from checkpoint: {checkpoint_path}")
+        checkpoint = torch.load(checkpoint_path, map_location=args.device)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        start_epoch = checkpoint['epoch']
+        best_f1 = checkpoint['best_f1']
+        print(f"Successfully resumed from epoch {start_epoch} (Best Val F1 so far: {best_f1:.4f})")
+
+    for epoch in range(start_epoch, args.epochs):
         train_loss = engine.train_one_epoch(
             model, train_loader, optimizer, args, current_epoch=epoch+1, total_epochs=args.epochs
         )
@@ -176,6 +189,24 @@ def train(train_loader, val_loader, args, pretrained_path=None):
         logger.writerow([epoch + 1, train_loss, val_loss, acc, macro_f1, macro_rec, current_lr])
         log_file.flush()
 
+        # Save checkpoint at the end of each epoch
+        checkpoint = {
+            'epoch': epoch + 1,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict(),
+            'best_f1': best_f1,
+        }
+        torch.save(checkpoint, checkpoint_path)
+
     log_file.close()
+
+    # Clean up checkpoint file upon successful completion of training to save disk space
+    if os.path.exists(checkpoint_path):
+        try:
+            os.remove(checkpoint_path)
+        except OSError:
+            pass
+
     print(f"\nBest val F1: {best_f1:.4f}  — weights saved to {model_path}")
     return model

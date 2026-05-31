@@ -145,7 +145,11 @@ def set_global_seed(seed: int = 42, deterministic: bool = True):
         os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
         torch.backends.cudnn.deterministic    = True
         torch.backends.cudnn.benchmark        = False
-        torch.use_deterministic_algorithms(True)
+        try:
+            torch.use_deterministic_algorithms(True, warn_only=True)
+        except TypeError:
+            # Fallback for very old torch versions (<1.11) where warn_only was not present
+            torch.use_deterministic_algorithms(True)
     else:
         torch.backends.cudnn.benchmark = True
 

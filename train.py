@@ -50,6 +50,8 @@ def parse_args():
                    help="standard: Baseline ViT/Fusion models. hope: exact HOPE replication.")
     p.add_argument("--mock_data", action="store_true",
                    help="Use randomly generated tensors instead of actual data for testing.")
+    p.add_argument("--resume", action="store_true",
+                   help="Automatically resume training from outputs/runs/<experiment_name>/checkpoint_latest.pth if it exists.")
 
     # ── Data ──────────────────────────────────────────────────────────────
     p.add_argument("--data_root",       type=str, default="/data/paired_npz")

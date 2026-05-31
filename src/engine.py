@@ -136,6 +136,15 @@ def train(train_loader, val_loader, args, pretrained_path=None):
     print_experiment_config(args)
     print(f"[{args.training_mode.upper()} mode]  device: {args.device}\n")
 
+    # If starting from scratch (no resume), delete old CSV log to avoid appending to dirty logs
+    if not getattr(args, "resume", False):
+        log_path = os.path.join("outputs", "logs", f"{args.experiment_name}.csv")
+        if os.path.exists(log_path):
+            try:
+                os.remove(log_path)
+            except OSError:
+                pass
+
     log_file, logger = create_experiment_logger(args.experiment_name)
     
     criterion_tuple = build_criterion(args)
@@ -153,15 +162,18 @@ def train(train_loader, val_loader, args, pretrained_path=None):
     checkpoint_path = os.path.join("outputs", "runs", args.experiment_name, "checkpoint_latest.pth")
     start_epoch = 0
 
-    if getattr(args, "resume", False) and os.path.exists(checkpoint_path):
-        print(f"Resuming training from checkpoint: {checkpoint_path}")
-        checkpoint = torch.load(checkpoint_path, map_location=args.device)
-        model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        start_epoch = checkpoint['epoch']
-        best_f1 = checkpoint['best_f1']
-        print(f"Successfully resumed from epoch {start_epoch} (Best Val F1 so far: {best_f1:.4f})")
+    if getattr(args, "resume", False):
+        if os.path.exists(checkpoint_path):
+            print(f"Resuming training from checkpoint: {checkpoint_path}")
+            checkpoint = torch.load(checkpoint_path, map_location=args.device)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            start_epoch = checkpoint['epoch']
+            best_f1 = checkpoint['best_f1']
+            print(f"Successfully resumed from epoch {start_epoch} (Best Val F1 so far: {best_f1:.4f})")
+        else:
+            print(f"No checkpoint found at {checkpoint_path}. Starting training from scratch...")
 
     for epoch in range(start_epoch, args.epochs):
         train_loss = engine.train_one_epoch(

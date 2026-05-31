@@ -19,6 +19,10 @@ import copy
 import os
 import sys
 import json
+import warnings
+
+# Silence PyTorch non-deterministic operations warning to keep logs clean
+warnings.filterwarnings("ignore", message=".*deterministic.*")
 
 import numpy as np
 import torch

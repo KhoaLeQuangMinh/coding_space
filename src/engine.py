@@ -181,9 +181,10 @@ def train(train_loader, val_loader, args, pretrained_path=None):
             if 'np_random_state' in checkpoint:
                 np.random.set_state(checkpoint['np_random_state'])
             if 'torch_random_state' in checkpoint:
-                torch.set_rng_state(checkpoint['torch_random_state'])
+                torch.set_rng_state(checkpoint['torch_random_state'].cpu())
             if 'torch_cuda_random_state' in checkpoint and checkpoint['torch_cuda_random_state'] is not None:
-                torch.cuda.set_rng_state_all(checkpoint['torch_cuda_random_state'])
+                cuda_states = [s.cpu() for s in checkpoint['torch_cuda_random_state']]
+                torch.cuda.set_rng_state_all(cuda_states)
                 
             print(f"Successfully resumed from epoch {start_epoch} (Best Val F1 so far: {best_f1:.4f})")
         else:

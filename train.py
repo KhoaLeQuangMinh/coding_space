@@ -94,9 +94,11 @@ def parse_args():
     p.add_argument("--momentum",     type=float, default=0.9)
 
     # ── Scheduler ─────────────────────────────────────────────────────────
-    p.add_argument("--T_0",     type=int,   default=10)
-    p.add_argument("--T_mult",  type=int,   default=3)
-    p.add_argument("--eta_min", type=float, default=1e-5)
+    p.add_argument("--T_0",      type=int,   default=10)
+    p.add_argument("--T_mult",   type=int,   default=3)
+    p.add_argument("--eta_min",  type=float, default=1e-5)
+    p.add_argument("--lr_decay", type=float, default=0.95, help="LR decay rate for ExponentialLR in HOPE mode")
+    p.add_argument("--m",        type=float, default=0.9,  help="Momentum decay for online prototype update in HOPE mode")
 
     args = p.parse_args()
     
@@ -106,6 +108,11 @@ def parse_args():
         args.loss = "hope"
         args.num_classes = 3
         args.class_names = ["CN", "MCI", "AD"]
+        # Default overrides to match original HOPE parameters exactly
+        if args.lr == 1e-3:
+            args.lr = 0.0002
+        if args.epochs == 40:
+            args.epochs = 60
         
     if args.mock_data:
         args.device = "cpu"

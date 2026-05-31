@@ -52,7 +52,8 @@ def build_model(args, pretrained_path=None) -> nn.Module:
         )
 
     elif model_type == "hope_resnet":
-        model = hope_resnet18(num_classes=args.num_classes)
+        m_val = getattr(args, "m", 0.9)
+        model = hope_resnet18(num_classes=args.num_classes, m=m_val)
         # Note: HOPE model trains from scratch with Kaiming init.
 
     else:   # "fusion"
@@ -69,6 +70,8 @@ def build_model(args, pretrained_path=None) -> nn.Module:
 
 
 def build_optimizer(model: nn.Module, args) -> optim.Optimizer:
+    if getattr(args, "training_mode", "standard") == "hope":
+        return optim.Adam(model.parameters(), lr=args.lr, betas=(0.5, 0.999))
     return optim.SGD(
         model.parameters(),
         lr          = args.lr,
@@ -78,6 +81,9 @@ def build_optimizer(model: nn.Module, args) -> optim.Optimizer:
 
 
 def build_scheduler(optimizer: optim.Optimizer, args):
+    if getattr(args, "training_mode", "standard") == "hope":
+        decay = getattr(args, "lr_decay", 0.95)
+        return optim.lr_scheduler.ExponentialLR(optimizer, gamma=decay)
     return optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer,
         T_0   = args.T_0,

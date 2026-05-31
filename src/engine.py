@@ -14,6 +14,8 @@ train(train_loader, val_loader, args, pretrained_path)
 """
 
 import os
+import random
+import numpy as np
 from sklearn.metrics import (
     accuracy_score, f1_score, recall_score,
     classification_report, confusion_matrix,
@@ -172,6 +174,17 @@ def train(train_loader, val_loader, args, pretrained_path=None):
             scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
             start_epoch = checkpoint['epoch']
             best_f1 = checkpoint['best_f1']
+            
+            # Restore all random generator states
+            if 'random_state' in checkpoint:
+                random.setstate(checkpoint['random_state'])
+            if 'np_random_state' in checkpoint:
+                np.random.set_state(checkpoint['np_random_state'])
+            if 'torch_random_state' in checkpoint:
+                torch.set_rng_state(checkpoint['torch_random_state'])
+            if 'torch_cuda_random_state' in checkpoint and checkpoint['torch_cuda_random_state'] is not None:
+                torch.cuda.set_rng_state_all(checkpoint['torch_cuda_random_state'])
+                
             print(f"Successfully resumed from epoch {start_epoch} (Best Val F1 so far: {best_f1:.4f})")
         else:
             print(f"No checkpoint found at {checkpoint_path}. Starting training from scratch...")
@@ -202,13 +215,17 @@ def train(train_loader, val_loader, args, pretrained_path=None):
         logger.writerow([epoch + 1, train_loss, val_loss, acc, macro_f1, macro_rec, current_lr])
         log_file.flush()
 
-        # Save checkpoint at the end of each epoch
+        # Save checkpoint at the end of each epoch, including full RNG states
         checkpoint = {
             'epoch': epoch + 1,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler.state_dict(),
             'best_f1': best_f1,
+            'random_state': random.getstate(),
+            'np_random_state': np.random.get_state(),
+            'torch_random_state': torch.get_rng_state(),
+            'torch_cuda_random_state': torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
         }
         torch.save(checkpoint, checkpoint_path)
 

@@ -138,6 +138,7 @@ def train(train_loader, val_loader, args, pretrained_path=None):
 
     # If starting from scratch (no resume), delete old CSV log to avoid appending to dirty logs
     if not getattr(args, "resume", False):
+        print(f"No resume flag provided. Deleting any previous training logs for '{args.experiment_name}' and starting from scratch...")
         log_path = os.path.join("outputs", "logs", f"{args.experiment_name}.csv")
         if os.path.exists(log_path):
             try:

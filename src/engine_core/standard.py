@@ -41,7 +41,8 @@ class StandardEngine(BaseEngine):
         all_preds, all_labels = [], []
 
         with torch.no_grad():
-            for batch in loader:
+            bar = tqdm(loader, desc="Eval", leave=False)
+            for batch in bar:
                 mri    = batch["mri"].to(args.device)
                 pet    = batch["pet"].to(args.device)
 
@@ -55,6 +56,7 @@ class StandardEngine(BaseEngine):
                     outputs = outputs.squeeze(1)   # (B, 1) -> (B,)
                 loss    = self.criterion(outputs, labels)
                 total_loss += loss.item()
+                bar.set_postfix(loss=f"{loss.item():.4f}")
 
                 preds = self.decode_fn(outputs, args)
                 all_preds.extend(preds.cpu().numpy())

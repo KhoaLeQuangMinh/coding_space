@@ -41,7 +41,8 @@ class HopeEngine(BaseEngine):
         all_preds, all_labels = [], []
 
         with torch.no_grad():
-            for batch in loader:
+            bar = tqdm(loader, desc="Eval", leave=False)
+            for batch in bar:
                 mri    = batch["mri"].to(args.device)
                 labels = batch["label"].to(args.device)
 
@@ -49,6 +50,7 @@ class HopeEngine(BaseEngine):
                 # Ensure we don't scale by epoch during evaluation
                 loss, _ = self.criterion(features, outputs, labels, args.epochs, args.epochs)
                 total_loss += loss.item()
+                bar.set_postfix(loss=f"{loss.item():.4f}")
 
                 _, preds = torch.max(outputs.data, 1)
                 all_preds.extend(preds.cpu().numpy())

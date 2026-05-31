@@ -104,10 +104,17 @@ def create_experiment_logger(experiment_name: str):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def print_experiment_config(args):
+    mode = getattr(args, 'training_mode', 'standard')
+    model = getattr(args, 'model_type', 'fusion')
+    loss = getattr(args, 'loss', 'crossentropy')
     print("\n" + "=" * 60)
     print(f"  Experiment : {args.experiment_name}")
     print("-" * 60)
-    print(f"  Model      : {args.fusion_type}")
+    print(f"  Mode       : {mode}")
+    print(f"  Model      : {model}")
+    if model == 'fusion':
+        print(f"  Fusion     : {args.fusion_type}")
+    print(f"  Loss       : {loss}")
     print(f"  Classes    : {args.num_classes}")
     print("-" * 60)
     print(f"  Device     : {args.device}")

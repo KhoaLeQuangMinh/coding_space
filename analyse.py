@@ -86,10 +86,38 @@ def main():
         print(f"\nLoading dataset from: {args.data_root}")
         dataset = MRIPETDataset(root=args.data_root, merge_mci=merge_mci)
 
+    from torch.utils.data import Subset, random_split
+    import numpy as np
+
     print(f"Dataset size: {len(dataset)} subjects")
 
+    # Recreate the exact deterministic test split based on training parameters
+    kfold = getattr(args, "kfold", 0)
+    if kfold > 0:
+        # KFold held-out test set creation (exact match to train.py)
+        all_indices = np.arange(len(dataset))
+        test_ratio = 1.0 - args.train_ratio - args.val_ratio
+        test_size = int(test_ratio * len(dataset))
+        rng = np.random.default_rng(args.seed)
+        shuffled = rng.permutation(all_indices)
+        test_indices = shuffled[:test_size]
+        test_subset = Subset(dataset, test_indices)
+        print(f"Loaded KFold test split — Test (Evaluating on): {len(test_subset)} subjects")
+    else:
+        # Standard split held-out test set creation (exact match to train.py)
+        generator = torch.Generator().manual_seed(args.seed)
+        train_size = int(args.train_ratio * len(dataset))
+        val_size = int(args.val_ratio * len(dataset))
+        test_size = len(dataset) - train_size - val_size
+        
+        train_ds, val_ds, test_ds = random_split(
+            dataset, [train_size, val_size, test_size], generator=generator
+        )
+        test_subset = Subset(dataset, test_ds.indices)
+        print(f"Loaded Standard test split — Test (Evaluating on): {len(test_subset)} subjects")
+
     loader = DataLoader(
-        dataset,
+        test_subset,
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=getattr(args, 'num_workers', 0),

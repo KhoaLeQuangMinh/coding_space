@@ -70,6 +70,8 @@ if __name__ == '__main__':
                 'Loss': m['val_loss'],
                 'Acc 4-class': m['val_acc_4class'],
                 'F1 4-class': m['val_f1_4class'],
+                'Acc 3-class': m['val_acc_3class'],
+                'F1 3-class': m['val_f1_3class'],
                 'MCI Acc': m['val_acc'],
                 'MCI F1': m['val_f1_score'],
                 'MCI SPE': m['val_spe'],
@@ -101,19 +103,44 @@ if __name__ == '__main__':
                              columns=['Pred CN', 'Pred sMCI', 'Pred pMCI', 'Pred AD'])
         print(cm_df.to_markdown())
         
-        # Save visual CM
+        # Confusion Matrix for 3-class across all folds
+        y_true_3c_all = []
+        y_pred_3c_all = []
+        for m in all_metrics:
+            y_true_3c_all.extend(m['y_true_3c'])
+            y_pred_3c_all.extend(m['y_pred_3c'])
+            
+        cm_3c = confusion_matrix(y_true_3c_all, y_pred_3c_all, labels=[0, 1, 2])
+        print("\nCombined 3-Class Confusion Matrix (CN=0, MCI=1, AD=2):")
+        cm_3c_df = pd.DataFrame(cm_3c, index=['True CN', 'True MCI', 'True AD'],
+                             columns=['Pred CN', 'Pred MCI', 'Pred AD'])
+        print(cm_3c_df.to_markdown())
+        
+        # Save visual CMs
         try:
+            expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
+            os.makedirs(expr_dir, exist_ok=True)
+            
+            # Plot 4-class
             plt.figure(figsize=(8, 6))
             sns.heatmap(cm_df, annot=True, fmt='d', cmap='Blues')
             plt.title('Combined 4-Class Confusion Matrix')
             plt.ylabel('True Label')
             plt.xlabel('Predicted Label')
             plt.tight_layout()
-            
-            expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
-            os.makedirs(expr_dir, exist_ok=True)
-            cm_path = os.path.join(expr_dir, f"{opt.name}_confusion_matrix.png")
+            cm_path = os.path.join(expr_dir, f"{opt.name}_confusion_matrix_4c.png")
             plt.savefig(cm_path)
-            print(f"\nSaved Confusion Matrix plot to {cm_path}")
+            
+            # Plot 3-class
+            plt.figure(figsize=(8, 6))
+            sns.heatmap(cm_3c_df, annot=True, fmt='d', cmap='Greens')
+            plt.title('Combined 3-Class Confusion Matrix')
+            plt.ylabel('True Label')
+            plt.xlabel('Predicted Label')
+            plt.tight_layout()
+            cm_path_3c = os.path.join(expr_dir, f"{opt.name}_confusion_matrix_3c.png")
+            plt.savefig(cm_path_3c)
+            
+            print(f"\nSaved Confusion Matrix plots to {expr_dir}")
         except Exception as e:
             print(f"Could not save confusion matrix plot: {e}")

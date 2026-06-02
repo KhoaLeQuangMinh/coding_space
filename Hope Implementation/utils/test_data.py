@@ -23,6 +23,8 @@ def test_data(model, test_dataloaders, criterion):
     
     y_val_true_4class = []
     y_val_pred_4class = []
+    y_val_true_3class = []
+    y_val_pred_3class = []
     
     with torch.no_grad():
         model.eval()
@@ -34,6 +36,8 @@ def test_data(model, test_dataloaders, criterion):
             _, x_predicted = torch.max(x.data, 1)
             
             for b, s, t in zip(x_predicted, val_predicted, labels):
+                t_val = t.item()
+                # 4-class mapping
                 if b == 0:
                     pred_4c = 0
                 elif b == 2:
@@ -41,8 +45,14 @@ def test_data(model, test_dataloaders, criterion):
                 else:
                     pred_4c = 1 if s == 0 else 2
                 
+                # 3-class mapping
+                pred_3c = b.item()
+                true_3c = 0 if t_val == 0 else (1 if t_val in [1, 2] else 2)
+                
                 y_val_pred_4class.append(pred_4c)
-                y_val_true_4class.append(t.item())
+                y_val_true_4class.append(t_val)
+                y_val_pred_3class.append(pred_3c)
+                y_val_true_3class.append(true_3c)
 
             mci_mask = (labels == 1) | (labels == 2)
             if mci_mask.any():
@@ -60,9 +70,15 @@ def test_data(model, test_dataloaders, criterion):
     # loss logging
     val_loss = val_loss / max(1, val_samples)
     
-    val_acc_4class = accuracy_score(y_val_true_4class, y_val_pred_4class)
-    val_f1_4class = f1_score(y_val_true_4class, y_val_pred_4class, average='weighted')
-    
+    if len(y_val_true_4class) > 0:
+        val_acc_4class = accuracy_score(y_val_true_4class, y_val_pred_4class)
+        val_f1_4class = f1_score(y_val_true_4class, y_val_pred_4class, average='weighted')
+        
+        val_acc_3class = accuracy_score(y_val_true_3class, y_val_pred_3class)
+        val_f1_3class = f1_score(y_val_true_3class, y_val_pred_3class, average='weighted')
+    else:
+        val_acc_4class = val_f1_4class = val_acc_3class = val_f1_3class = 0.0
+
     # In case there are no MCI samples
     if len(y_val_true) > 0:
         val_acc = accuracy_score(y_val_true, y_val_pred)
@@ -84,6 +100,8 @@ def test_data(model, test_dataloaders, criterion):
         'Test Loss:{:.3f}...'.format(val_loss),
         'Test Acc 4-class:{:.3f}...'.format(val_acc_4class),
         'Test F1 4-class:{:.3f}...'.format(val_f1_4class),
+        'Test Acc 3-class:{:.3f}...'.format(val_acc_3class),
+        'Test F1 3-class:{:.3f}...'.format(val_f1_3class),
         'Test Accuracy:{:.3f}...'.format(val_acc),
         'Test F1 Score:{:.3f}'.format(val_f1_score),
         'Test SPE:{:.3f}...'.format(val_spe),
@@ -100,6 +118,8 @@ def test_data(model, test_dataloaders, criterion):
         'val_loss': val_loss,
         'val_acc_4class': val_acc_4class,
         'val_f1_4class': val_f1_4class,
+        'val_acc_3class': val_acc_3class,
+        'val_f1_3class': val_f1_3class,
         'val_acc': val_acc,
         'val_f1_score': val_f1_score,
         'val_spe': val_spe,
@@ -108,6 +128,8 @@ def test_data(model, test_dataloaders, criterion):
         'val_precision': val_precision,
         'y_true_4c': y_val_true_4class,
         'y_pred_4c': y_val_pred_4class,
+        'y_true_3c': y_val_true_3class,
+        'y_pred_3c': y_val_pred_3class,
         'y_true_mci': y_val_true,
         'y_pred_mci': y_val_pred
     }

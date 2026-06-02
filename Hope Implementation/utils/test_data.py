@@ -26,7 +26,7 @@ def test_data(model, test_dataloaders, criterion):
     
     with torch.no_grad():
         model.eval()
-        for ii, (images, labels) in enumerate(tqdm(test_dataloaders, leave=False)):
+        for ii, (images, labels) in enumerate(test_dataloaders):
             images, labels = images.cuda(), labels.cuda()
             _, x, outputs = model(images)
             

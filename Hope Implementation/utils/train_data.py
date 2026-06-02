@@ -44,7 +44,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         y_train_pred = []
         cn_iterator = iter(total_cn_loader)
         mci_iterator = iter(total_mci_loader)
-        for ii, (imgs_ad, labels_ad) in enumerate(tqdm(total_ad_loader, leave=False)):
+        for ii, (imgs_ad, labels_ad) in enumerate(total_ad_loader):
             steps += 1
             try:
                 imgs_cn, labels_cn = next(cn_iterator)
@@ -113,7 +113,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         
         with torch.no_grad():
             model.eval()
-            for ii, (images, labels) in enumerate(tqdm(valid_dataloaders, leave=False)):
+            for ii, (images, labels) in enumerate(valid_dataloaders):
                 images, labels = images.cuda(), labels.cuda()
                 _, x, outputs = model(images)
                 

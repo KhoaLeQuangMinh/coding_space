@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
+import seaborn as sns # type: ignore
 from tqdm import tqdm
 from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import train_test_split

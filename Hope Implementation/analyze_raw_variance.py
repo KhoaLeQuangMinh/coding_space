@@ -136,20 +136,46 @@ def main():
     
     # 4. Global Severity Scoring
     print("\nComputing Global Severity Scores...")
+    # Free up memory from massive N x N matrices
+    del dist_L2, sim_Cos
+    import gc
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
     # Calculate Mean CN and Mean AD
     mean_CN = X[y == 0].mean(dim=0).unsqueeze(0) # [1, D]
     mean_AD = X[y == 2].mean(dim=0).unsqueeze(0) # [1, D]
     
+    # Process in chunks of 50 to prevent OOM
+    chunk_size = 50
+    dist_to_CN_L2_list = []
+    dist_to_AD_L2_list = []
+    sim_to_CN_Cos_list = []
+    sim_to_AD_Cos_list = []
+    
+    mean_CN_norm = F.normalize(mean_CN, p=2, dim=1)
+    mean_AD_norm = F.normalize(mean_AD, p=2, dim=1)
+
+    for i in range(0, N, chunk_size):
+        X_chunk = X[i:i+chunk_size]
+        X_norm_chunk = X_norm[i:i+chunk_size]
+        
+        dist_to_CN_L2_list.append(torch.cdist(X_chunk, mean_CN, p=2.0).squeeze(1))
+        dist_to_AD_L2_list.append(torch.cdist(X_chunk, mean_AD, p=2.0).squeeze(1))
+        
+        sim_to_CN_Cos_list.append(torch.matmul(X_norm_chunk, mean_CN_norm.T).squeeze(1))
+        sim_to_AD_Cos_list.append(torch.matmul(X_norm_chunk, mean_AD_norm.T).squeeze(1))
+
+    dist_to_CN_L2 = torch.cat(dist_to_CN_L2_list)
+    dist_to_AD_L2 = torch.cat(dist_to_AD_L2_list)
+    sim_to_CN_Cos = torch.cat(sim_to_CN_Cos_list)
+    sim_to_AD_Cos = torch.cat(sim_to_AD_Cos_list)
+
     # Global Severity (L2): Distance to CN - Distance to AD 
-    dist_to_CN_L2 = torch.cdist(X, mean_CN, p=2.0).squeeze()
-    dist_to_AD_L2 = torch.cdist(X, mean_AD, p=2.0).squeeze()
     severity_L2 = dist_to_CN_L2 - dist_to_AD_L2
     
     # Global Severity (Cosine): Similarity to AD - Similarity to CN
-    mean_CN_norm = F.normalize(mean_CN, p=2, dim=1)
-    mean_AD_norm = F.normalize(mean_AD, p=2, dim=1)
-    sim_to_CN_Cos = torch.matmul(X_norm, mean_CN_norm.T).squeeze()
-    sim_to_AD_Cos = torch.matmul(X_norm, mean_AD_norm.T).squeeze()
     severity_Cos = sim_to_AD_Cos - sim_to_CN_Cos
     
     y_cpu = y.cpu().numpy()

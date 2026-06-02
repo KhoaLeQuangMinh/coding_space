@@ -82,15 +82,15 @@ def test_data(model, test_dataloaders, criterion):
         val_acc = val_f1_score = val_recall = val_spe = val_precision = val_auc = 0.0
 
     print(
-        'Val Loss:{:.3f}...'.format(val_loss),
-        'Val Acc 4-class:{:.3f}...'.format(val_acc_4class),
-        'Val F1 4-class:{:.3f}...'.format(val_f1_4class),
-        'Val Accuracy:{:.3f}...'.format(val_acc),
-        'Val F1 Score:{:.3f}'.format(val_f1_score),
-        'Val SPE:{:.3f}...'.format(val_spe),
-        'Val SEN:{:.3f}...'.format(val_recall),
-        'Val AUC:{:.3f}...'.format(val_auc),
-        "Val precision:{:.3f}...".format(val_precision)
+        'Test Loss:{:.3f}...'.format(val_loss),
+        'Test Acc 4-class:{:.3f}...'.format(val_acc_4class),
+        'Test F1 4-class:{:.3f}...'.format(val_f1_4class),
+        'Test Accuracy:{:.3f}...'.format(val_acc),
+        'Test F1 Score:{:.3f}'.format(val_f1_score),
+        'Test SPE:{:.3f}...'.format(val_spe),
+        'Test SEN:{:.3f}...'.format(val_recall),
+        'Test AUC:{:.3f}...'.format(val_auc),
+        "Test precision:{:.3f}...".format(val_precision)
     )
 
     end = time.time()

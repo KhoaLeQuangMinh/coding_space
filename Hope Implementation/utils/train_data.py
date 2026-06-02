@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import wandb
 from sklearn.metrics import f1_score, recall_score, roc_auc_score, accuracy_score, precision_score
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
@@ -44,7 +44,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         y_train_pred = []
         cn_iterator = iter(total_cn_loader)
         mci_iterator = iter(total_mci_loader)
-        for ii, (imgs_ad, labels_ad) in enumerate(tqdm(total_ad_loader)):
+        for ii, (imgs_ad, labels_ad) in enumerate(tqdm(total_ad_loader, leave=False)):
             steps += 1
             try:
                 imgs_cn, labels_cn = next(cn_iterator)
@@ -113,7 +113,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         
         with torch.no_grad():
             model.eval()
-            for ii, (images, labels) in enumerate(tqdm(valid_dataloaders)):
+            for ii, (images, labels) in enumerate(tqdm(valid_dataloaders, leave=False)):
                 images, labels = images.cuda(), labels.cuda()
                 _, x, outputs = model(images)
                 

@@ -3,7 +3,7 @@ import time
 import numpy as np
 import torch
 from sklearn.metrics import f1_score, recall_score, roc_auc_score, accuracy_score, precision_score
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 def test_data(model, test_dataloaders, criterion):
@@ -26,7 +26,7 @@ def test_data(model, test_dataloaders, criterion):
     
     with torch.no_grad():
         model.eval()
-        for ii, (images, labels) in enumerate(tqdm(test_dataloaders)):
+        for ii, (images, labels) in enumerate(tqdm(test_dataloaders, leave=False)):
             images, labels = images.cuda(), labels.cuda()
             _, x, outputs = model(images)
             

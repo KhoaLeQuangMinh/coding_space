@@ -25,6 +25,7 @@ def load_all_data(data_dir):
     files = sorted([f for f in os.listdir(data_dir) if f.endswith('.npz')])
     data_list = []
     labels_list = [] # 0: CN, 1: MCI, 2: AD
+    labels_list_4class = [] # 0: CN, 1: sMCI, 2: pMCI, 3: AD
     
     print(f"Loading {len(files)} files from {data_dir}...")
     for f in tqdm(files):
@@ -34,10 +35,16 @@ def load_all_data(data_dir):
         
         if string_label == "CN":
             lbl = 0
-        elif string_label in ["sMCI", "pMCI"]:
+            lbl_4 = 0
+        elif string_label == "sMCI":
             lbl = 1
+            lbl_4 = 1
+        elif string_label == "pMCI":
+            lbl = 1
+            lbl_4 = 2
         elif string_label == "AD":
             lbl = 2
+            lbl_4 = 3
         else:
             continue
             
@@ -49,10 +56,12 @@ def load_all_data(data_dir):
         flat_tensor = torch.from_numpy(mwp1.flatten()).float()
         data_list.append(flat_tensor)
         labels_list.append(lbl)
+        labels_list_4class.append(lbl_4)
         
     X = torch.stack(data_list)
     y = torch.tensor(labels_list)
-    return X, y
+    y_4class = torch.tensor(labels_list_4class)
+    return X, y, y_4class
 
 def main():
     parser = argparse.ArgumentParser()
@@ -66,12 +75,13 @@ def main():
     print(f"Using device: {device}")
 
     # 1. Load Data
-    X, y = load_all_data(opt.data_dir)
+    X, y, y_4 = load_all_data(opt.data_dir)
     N = X.shape[0]
     
     # Push to device
     X = X.to(device)
     y = y.to(device)
+    y_4 = y_4.to(device)
     
     print(f"Loaded feature matrix: {X.shape}")
     
@@ -179,6 +189,7 @@ def main():
     severity_Cos = sim_to_AD_Cos - sim_to_CN_Cos
     
     y_cpu = y.cpu().numpy()
+    y_4_cpu = y_4.cpu().numpy()
     sev_L2_cpu = severity_L2.cpu().numpy()
     sev_Cos_cpu = severity_Cos.cpu().numpy()
     
@@ -208,6 +219,34 @@ def main():
     cos_path = os.path.join(opt.out_dir, 'severity_dist_Cosine.png')
     plt.savefig(cos_path)
     print(f"Saved Cosine plot to {cos_path}")
+
+    # 4-Class plots
+    class_names_4 = {0: 'CN', 1: 'sMCI', 2: 'pMCI', 3: 'AD'}
+    labels_str_4 = [class_names_4[lbl] for lbl in y_4_cpu]
+    
+    df_4 = pd.DataFrame({
+        'Label': labels_str_4,
+        'Severity_L2': sev_L2_cpu,
+        'Severity_Cos': sev_Cos_cpu
+    })
+    
+    plt.figure(figsize=(10, 6))
+    sns.kdeplot(data=df_4, x='Severity_L2', hue='Label', fill=True, common_norm=False, palette={'CN':'blue', 'sMCI':'green', 'pMCI':'orange', 'AD':'red'})
+    plt.title('Global Severity Score Distribution (L2 Distance) - 4 Class')
+    plt.xlabel('Severity (Distance to CN - Distance to AD)')
+    plt.ylabel('Density')
+    l2_4_path = os.path.join(opt.out_dir, 'severity_dist_L2_4class.png')
+    plt.savefig(l2_4_path)
+    print(f"Saved 4-class L2 plot to {l2_4_path}")
+    
+    plt.figure(figsize=(10, 6))
+    sns.kdeplot(data=df_4, x='Severity_Cos', hue='Label', fill=True, common_norm=False, palette={'CN':'blue', 'sMCI':'green', 'pMCI':'orange', 'AD':'red'})
+    plt.title('Global Severity Score Distribution (Cosine Similarity) - 4 Class')
+    plt.xlabel('Severity (Sim to AD - Sim to CN)')
+    plt.ylabel('Density')
+    cos_4_path = os.path.join(opt.out_dir, 'severity_dist_Cosine_4class.png')
+    plt.savefig(cos_4_path)
+    print(f"Saved 4-class Cosine plot to {cos_4_path}")
 
 if __name__ == '__main__':
     main()

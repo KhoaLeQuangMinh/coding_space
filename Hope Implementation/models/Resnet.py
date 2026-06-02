@@ -223,7 +223,7 @@ class ResNet(nn.Module):
         x_ori = self.fc1(x_ori)
         # corresponding fc output
         x = self.fc2(x_ori)
-        x_ori_norm = torch.nn.functional.normalize(x_ori, p=2, dim=0)
+        x_ori_norm = torch.nn.functional.normalize(x_ori, p=2, dim=1)
         # prototype comparison
         spmci_prob = torch.softmax(torch.cat((self.cos(x_ori_norm, self.prototypes[0]), self.cos(x_ori_norm,
                                                                                                  self.prototypes[2])),

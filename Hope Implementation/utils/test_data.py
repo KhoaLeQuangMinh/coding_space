@@ -55,7 +55,6 @@ def test_data(model, test_dataloaders, criterion):
                 _, mci_predicted = torch.max(mci_outputs.data, 1)
                 y_val_true.extend(np.ravel(np.squeeze(mci_labels.cpu().detach().numpy())).tolist())
                 y_val_pred.extend(np.ravel(np.squeeze(mci_predicted.cpu().detach().numpy())).tolist())
-                mci_outputs = mci_outputs.softmax(dim=-1)
                 val_prob_all.extend(mci_outputs[:, 1].cpu().detach().numpy())
 
     # loss logging

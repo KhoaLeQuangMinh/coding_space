@@ -96,3 +96,20 @@ def test_data(model, test_dataloaders, criterion):
     end = time.time()
     runing_time = end - start
     print('Testing time is {:.0f}m {:.0f}s'.format(runing_time // 60, runing_time % 60))
+
+    metrics = {
+        'val_loss': val_loss,
+        'val_acc_4class': val_acc_4class,
+        'val_f1_4class': val_f1_4class,
+        'val_acc': val_acc,
+        'val_f1_score': val_f1_score,
+        'val_spe': val_spe,
+        'val_sen': val_recall,
+        'val_auc': val_auc,
+        'val_precision': val_precision,
+        'y_true_4c': y_val_true_4class,
+        'y_pred_4c': y_val_pred_4class,
+        'y_true_mci': y_val_true,
+        'y_pred_mci': y_val_pred
+    }
+    return metrics

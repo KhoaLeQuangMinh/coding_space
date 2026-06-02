@@ -7,6 +7,13 @@ from utils.test_data import *
 from utils.tools import *
 from utils.train_data import *
 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+from sklearn.metrics import confusion_matrix
+import os
+
 def run_test(opt, current_fold):
     model = define_Cls(opt.cls_type, class_num=opt.class_num, init_type=opt.init_type, init_gain=opt.init_gain, m=opt.m,
                        gpu_ids=opt.gpu_ids)
@@ -33,17 +40,80 @@ def run_test(opt, current_fold):
         model.cuda()
         print(f"loading weights from {load_dir}")
         print("Testing on the testing set")
-        test_data(model, test_loader, criterion)
+        return test_data(model, test_loader, criterion)
     except FileNotFoundError:
         print(f"Weights {load_dir} not found. Ensure the model has been trained.")
+        return None
 
 if __name__ == '__main__':
     # -----  Loading the init options -----
     opt = TestOptions().parse()
     
+    all_metrics = []
     if opt.kfold > 1:
         for f in range(1, opt.kfold + 1):
             print(f"\n{'='*40}\nTesting Fold {f}/{opt.kfold}\n{'='*40}\n")
-            run_test(opt, f)
+            res = run_test(opt, f)
+            if res is not None:
+                all_metrics.append(res)
     else:
-        run_test(opt, 1)
+        res = run_test(opt, 1)
+        if res is not None:
+            all_metrics.append(res)
+
+    if len(all_metrics) > 0:
+        print(f"\n{'='*40}\nTesting Summary\n{'='*40}\n")
+        
+        summary_data = []
+        for m in all_metrics:
+            summary_data.append({
+                'Loss': m['val_loss'],
+                'Acc 4-class': m['val_acc_4class'],
+                'F1 4-class': m['val_f1_4class'],
+                'MCI Acc': m['val_acc'],
+                'MCI F1': m['val_f1_score'],
+                'MCI SPE': m['val_spe'],
+                'MCI SEN': m['val_sen'],
+                'MCI AUC': m['val_auc'],
+                'MCI Prec': m['val_precision']
+            })
+        
+        df = pd.DataFrame(summary_data)
+        df.index = [f"Fold {i+1}" for i in range(len(all_metrics))]
+        
+        if len(all_metrics) > 1:
+            df.loc['Mean'] = df.mean()
+            df.loc['Std'] = df.std()
+        
+        print(df.to_markdown())
+        
+        # Confusion Matrix for 4-class across all folds
+        y_true_all = []
+        y_pred_all = []
+        for m in all_metrics:
+            y_true_all.extend(m['y_true_4c'])
+            y_pred_all.extend(m['y_pred_4c'])
+        
+        cm = confusion_matrix(y_true_all, y_pred_all, labels=[0, 1, 2, 3])
+        
+        print("\nCombined 4-Class Confusion Matrix (CN=0, sMCI=1, pMCI=2, AD=3):")
+        cm_df = pd.DataFrame(cm, index=['True CN', 'True sMCI', 'True pMCI', 'True AD'],
+                             columns=['Pred CN', 'Pred sMCI', 'Pred pMCI', 'Pred AD'])
+        print(cm_df.to_markdown())
+        
+        # Save visual CM
+        try:
+            plt.figure(figsize=(8, 6))
+            sns.heatmap(cm_df, annot=True, fmt='d', cmap='Blues')
+            plt.title('Combined 4-Class Confusion Matrix')
+            plt.ylabel('True Label')
+            plt.xlabel('Predicted Label')
+            plt.tight_layout()
+            
+            expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
+            os.makedirs(expr_dir, exist_ok=True)
+            cm_path = os.path.join(expr_dir, f"{opt.name}_confusion_matrix.png")
+            plt.savefig(cm_path)
+            print(f"\nSaved Confusion Matrix plot to {cm_path}")
+        except Exception as e:
+            print(f"Could not save confusion matrix plot: {e}")

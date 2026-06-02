@@ -28,17 +28,19 @@ def load_all_data(data_dir):
     
     print(f"Loading {len(files)} files from {data_dir}...")
     for f in tqdm(files):
-        if "CN" in f:
+        path = os.path.join(data_dir, f)
+        sample = np.load(path, allow_pickle=True)
+        string_label = sample["label"].item()
+        
+        if string_label == "CN":
             lbl = 0
-        elif "MCI" in f:  # catches sMCI and pMCI
+        elif string_label in ["sMCI", "pMCI"]:
             lbl = 1
-        elif "AD" in f:
+        elif string_label == "AD":
             lbl = 2
         else:
             continue
             
-        path = os.path.join(data_dir, f)
-        sample = np.load(path)
         mwp1 = sample["mwp1"]
         mwp1 = np.nan_to_num(mwp1, nan=0.0)
         mwp1 = resize_volume_fast(mwp1, TARGET_SHAPE)

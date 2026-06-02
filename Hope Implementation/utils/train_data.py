@@ -175,6 +175,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         else:
             val_acc = val_f1_score = val_recall = val_spe = val_precision = val_auc = 0.0
             
+        train_acc = accuracy_score(y_train_true, y_train_pred)
         train_f1_score = f1_score(y_train_true, y_train_pred, average='weighted')
         train_recall = recall_score(y_train_true, y_train_pred, average='weighted')
         if e % print_freq == 0:

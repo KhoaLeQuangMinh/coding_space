@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from options.test_options import TestOptions

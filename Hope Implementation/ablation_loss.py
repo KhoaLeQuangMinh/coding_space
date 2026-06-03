@@ -35,6 +35,7 @@ def main():
             "--m", "0.9", # Lock EMA momentum to 0.9 as requested by the user
             "--ablation_loss", loss_type,
             "--gpu_ids", "0",
+            "--epoch_count", "30",
             "--name", f"ablation_loss_{loss_type}"
         ]
         

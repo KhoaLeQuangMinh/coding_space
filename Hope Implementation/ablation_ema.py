@@ -32,6 +32,7 @@ def main():
             "--m", str(m),
             "--ablation_loss", "full", # Lock loss to full for EMA ablation
             "--gpu_ids", "0",
+            "--epoch_count", "30",
             "--name", f"ablation_ema_{variant_name}"
         ]
         

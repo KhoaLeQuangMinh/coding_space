@@ -33,6 +33,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
     '''
     start = time.time()
     steps = 0
+    history = []
     for e in tqdm(range(1, epochs + 1)):
         model.train()
         train_loss = 0.
@@ -219,9 +220,45 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                   'Val AUC:{:.3f}...'.format(val_auc),
                   "Val precision:{:.3f}...".format(val_precision)
                   )
+        history.append({
+            'epoch': e,
+            'ablation_loss': ablation_loss,
+            'train_loss': train_loss,
+            'train_acc': train_acc,
+            'train_f1': train_f1_score,
+            'val_loss': val_loss,
+            'val_acc': val_acc,
+            'val_f1': val_f1_score,
+            'val_sen': val_recall,
+            'val_spe': val_spe,
+            'val_precision': val_precision,
+            'val_auc': val_auc
+        })
         if e % save_epoch_freq == 0:
             torch.save(model.state_dict(), expr_dir + '/{}_net.pth'.format(e))
 
     end = time.time()
     runing_time = end - start
     print('Training time is {:.0f}m {:.0f}s'.format(runing_time // 60, runing_time % 60))
+
+    import csv
+    import os
+    if len(history) > 0:
+        # Save full history of all epochs
+        history_path = os.path.join(expr_dir, 'history.csv')
+        keys = history[0].keys()
+        with open(history_path, mode='w', newline='') as f:
+            dict_writer = csv.DictWriter(f, keys)
+            dict_writer.writeheader()
+            dict_writer.writerows(history)
+            
+        # Find best validation accuracy epoch
+        best_epoch = max(history, key=lambda x: x['val_acc'])
+        best_path = os.path.join(expr_dir, 'best_metrics.csv')
+        with open(best_path, mode='w', newline='') as f:
+            dict_writer = csv.DictWriter(f, keys)
+            dict_writer.writeheader()
+            dict_writer.writerow(best_epoch)
+            
+        print(f"Saved full history to: {history_path}")
+        print(f"Saved BEST epoch (Epoch {best_epoch['epoch']}) to: {best_path}")

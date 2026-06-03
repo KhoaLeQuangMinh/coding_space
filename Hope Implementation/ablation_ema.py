@@ -33,6 +33,7 @@ def main():
             "--ablation_loss", "full", # Lock loss to full for EMA ablation
             "--gpu_ids", "0",
             "--epoch_count", "30",
+            "--checkpoints_dir", "./checkpoints",
             "--name", f"ablation_ema_{variant_name}"
         ]
         

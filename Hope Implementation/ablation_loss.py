@@ -36,6 +36,7 @@ def main():
             "--ablation_loss", loss_type,
             "--gpu_ids", "0",
             "--epoch_count", "30",
+            "--checkpoints_dir", "./checkpoints",
             "--name", f"ablation_loss_{loss_type}"
         ]
         

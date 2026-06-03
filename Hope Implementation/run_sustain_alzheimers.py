@@ -100,13 +100,31 @@ def main():
     parser.add_argument('--aal_path', type=str, required=True, help='path to AAL template .nii file')
     parser.add_argument('--out_dir', type=str, default='./sustain_output', help='where to save SuStaIn outputs')
     parser.add_argument('--n_subtypes', type=int, default=3, help='Maximum number of subtypes (N_S_max)')
+    parser.add_argument('--mcmc_iters', type=int, default=100000, help='Number of MCMC iterations (lower this to e.g. 10000 for a fast test)')
+    parser.add_argument('--top_k_regions', type=int, default=15, help='Number of top brain regions to keep. SuStaIn scales factorially; >20 takes very long.')
     opt = parser.parse_args()
 
     os.makedirs(opt.out_dir, exist_ok=True)
     
     # 1. Feature Extraction
     X, y, subj_ids, region_ids = extract_aal_features(opt.data_dir, opt.aal_path)
-    print(f"\nExtracted Feature Matrix Shape: {X.shape} (Subjects x Biomarkers)")
+    print(f"\nExtracted Original Feature Matrix Shape: {X.shape} (Subjects x Biomarkers)")
+    
+    # 1.5 Feature Selection (Crucial for Speed)
+    # SuStaIn MCMC computation time explodes if there are too many biomarkers (> 20).
+    # We will automatically select the top K regions that show the biggest difference between CN and AD.
+    mean_cn = np.mean(X[y == 0], axis=0)
+    mean_ad = np.mean(X[y == 3], axis=0)
+    abs_diff = np.abs(mean_cn - mean_ad)
+    
+    # Get indices of the top K largest differences
+    top_k = min(opt.top_k_regions, X.shape[1])
+    top_indices = np.argsort(abs_diff)[-top_k:]
+    top_indices = np.sort(top_indices) # keep original region ordering
+    
+    X = X[:, top_indices]
+    region_ids = region_ids[top_indices]
+    print(f"Reduced Feature Matrix Shape after Top {top_k} selection: {X.shape} (Subjects x Biomarkers)")
     
     # 2. Prepare SuStaIn Labels
     # SuStaIn expects: 0 for healthy controls, 1 for diseased cases, 2 for intermediate (ignored during GMM fitting)
@@ -139,8 +157,8 @@ def main():
     dataset_name = 'alzheimers_aal'
     N_startpoints = 25
     N_S_max = opt.n_subtypes
-    N_iterations_MCMC = int(1e5)
-    use_parallel_startpoints = True
+    N_iterations_MCMC = opt.mcmc_iters
+    use_parallel_startpoints = False
     
     print(f"\nInitializing MixtureSustain with {N_S_max} max subtypes...")
     sustain = MixtureSustain(L_yes, L_no, biomarker_names, N_startpoints, N_S_max, 

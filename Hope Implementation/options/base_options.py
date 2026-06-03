@@ -37,6 +37,8 @@ class BaseOptions():
         parser.add_argument('--seed', type=int, default=42, help='random seed for deterministic splitting')
         parser.add_argument('--kfold', type=int, default=5, help='number of folds for cross validation (1 to disable)')
         parser.add_argument('--fold', type=int, default=1, help='current fold to execute')
+        parser.add_argument('--specific_fold', type=int, default=-1, help='run only this specific fold in a kfold setup (distributed execution)')
+        parser.add_argument('--ablation_loss', type=str, default='full', choices=['full', 'ce', 'ins2ins', 'ins2cls'], help='which loss components to use for ablation study')
         self.initialized = True
 
         return parser

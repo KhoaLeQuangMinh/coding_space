@@ -69,7 +69,7 @@ def run_fold(opt, current_fold):
     train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                valid_loader, epochs, optimizer, scheduler,
                basiccomputing, criterion, criterionRank, expr_dir, opt.print_freq,
-               opt.save_epoch_freq)
+               opt.save_epoch_freq, opt.ablation_loss)
     wandb.finish()
 
 
@@ -77,7 +77,10 @@ if __name__ == '__main__':
     # -----  Loading the init options -----
     opt = TrainOptions().parse()
     
-    if opt.kfold > 1:
+    if opt.specific_fold != -1:
+        print(f"\n{'='*40}\nStarting SPECIFIC Fold {opt.specific_fold}/{opt.kfold} (Distributed Mode)\n{'='*40}\n")
+        run_fold(opt, opt.specific_fold)
+    elif opt.kfold > 1:
         for f in range(1, opt.kfold + 1):
             print(f"\n{'='*40}\nStarting Fold {f}/{opt.kfold}\n{'='*40}\n")
             run_fold(opt, f)

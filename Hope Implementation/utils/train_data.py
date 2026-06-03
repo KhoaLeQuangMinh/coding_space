@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                valid_dataloaders, epochs, optimizer, scheduler,
                basiccomputing, criterion, criterionRank,
-               expr_dir, print_freq, save_epoch_freq,
+               expr_dir, print_freq, save_epoch_freq, ablation_loss='full'
                ):
     '''
     train process
@@ -28,6 +28,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
     :param expr_dir: the saved directory
     :param print_freq: print frequency
     :param save_epoch_freq: saving frequency
+    :param ablation_loss: determines which loss components to use ('ce', 'ins2ins', 'ins2cls', 'full')
     :return:
     '''
     start = time.time()
@@ -68,13 +69,19 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             # CE loss
             loss_CE = criterion(outputs, labels)
 
-            # Hybrid-granularity ordinal loss
+            # Hybrid-granularity ordinal loss (Ablation Control)
             loss_ins2ins = criterionRank(features, labels)  # instance-to-instance loss
             loss_ins2cls = compactness_loss / features.shape[1]  # instance-to-class loss
-            loss_cls2cls = features.shape[1] / separation_loss + criterionRank(mus, torch.tensor(
-                [0, 1, 2]).cuda())
-
-            loss_hyb = loss_ins2ins + loss_ins2cls + loss_cls2cls
+            loss_cls2cls = features.shape[1] / separation_loss + criterionRank(mus, torch.tensor([0, 1, 2]).cuda())
+            
+            if ablation_loss == 'ce':
+                loss_hyb = 0
+            elif ablation_loss == 'ins2ins':
+                loss_hyb = loss_ins2ins
+            elif ablation_loss == 'ins2cls':
+                loss_hyb = loss_ins2ins + loss_ins2cls
+            else: # 'full'
+                loss_hyb = loss_ins2ins + loss_ins2cls + loss_cls2cls
 
             # total loss
             lambda_hyb = e * (1 / epochs)

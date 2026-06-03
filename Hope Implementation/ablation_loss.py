@@ -34,6 +34,7 @@ def main():
             "--specific_fold", str(args.specific_fold),
             "--m", "0.9", # Lock EMA momentum to 0.9 as requested by the user
             "--ablation_loss", loss_type,
+            "--gpu_ids", "0",
             "--name", f"ablation_loss_{loss_type}"
         ]
         

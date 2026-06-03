@@ -31,6 +31,7 @@ def main():
             "--specific_fold", str(args.specific_fold),
             "--m", str(m),
             "--ablation_loss", "full", # Lock loss to full for EMA ablation
+            "--gpu_ids", "0",
             "--name", f"ablation_ema_{variant_name}"
         ]
         

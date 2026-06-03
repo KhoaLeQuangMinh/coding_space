@@ -75,7 +75,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             loss_cls2cls = features.shape[1] / separation_loss + criterionRank(mus, torch.tensor([0, 1, 2]).cuda())
             
             if ablation_loss == 'ce':
-                loss_hyb = 0
+                loss_hyb = torch.tensor(0.0, device=loss_CE.device)
             elif ablation_loss == 'ins2ins':
                 loss_hyb = loss_ins2ins
             elif ablation_loss == 'ins2cls':

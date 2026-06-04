@@ -50,7 +50,13 @@ if __name__ == '__main__':
     opt = TestOptions().parse()
     
     all_metrics = []
-    if opt.kfold > 1:
+    
+    if opt.specific_fold != -1:
+        print(f"\n{'='*40}\nTesting SPECIFIC Fold {opt.specific_fold}/{opt.kfold} (Distributed Mode)\n{'='*40}\n")
+        res = run_test(opt, opt.specific_fold)
+        if res is not None:
+            all_metrics.append(res)
+    elif opt.kfold > 1:
         for f in range(1, opt.kfold + 1):
             print(f"\n{'='*40}\nTesting Fold {f}/{opt.kfold}\n{'='*40}\n")
             res = run_test(opt, f)
@@ -89,6 +95,17 @@ if __name__ == '__main__':
         
         print(df.to_markdown())
         
+        try:
+            if opt.specific_fold != -1:
+                expr_dir = os.path.join(opt.checkpoints_dir, f"{opt.name}_fold{opt.specific_fold}")
+            else:
+                expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
+            os.makedirs(expr_dir, exist_ok=True)
+            csv_path = os.path.join(expr_dir, "test_metrics.csv")
+            df.to_csv(csv_path)
+            print(f"\nSaved test metrics to {csv_path}")
+        except Exception as e:
+            print(f"Could not save test metrics csv: {e}")
         # Confusion Matrix for 4-class across all folds
         y_true_all = []
         y_pred_all = []
@@ -118,7 +135,10 @@ if __name__ == '__main__':
         
         # Save visual CMs
         try:
-            expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
+            if opt.specific_fold != -1:
+                expr_dir = os.path.join(opt.checkpoints_dir, f"{opt.name}_fold{opt.specific_fold}")
+            else:
+                expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
             os.makedirs(expr_dir, exist_ok=True)
             
             # Plot 4-class

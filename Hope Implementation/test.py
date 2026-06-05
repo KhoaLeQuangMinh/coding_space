@@ -31,7 +31,10 @@ def run_test(opt, current_fold):
         num_workers=num_workers_test, pin_memory=True)
 
     # model loading
-    load_dir = opt.load_dir if opt.kfold == 1 else f"{opt.load_dir}_fold{current_fold}/{opt.epoch_count}_net.pth"
+    if opt.kfold == 1:
+        load_dir = opt.load_dir
+    else:
+        load_dir = f"{opt.load_dir}_fold{current_fold}/best_{opt.test_target}_net.pth"
     try:
         state_dict = torch.load(load_dir, map_location='cpu')
         model.load_state_dict(state_dict, strict=False)
@@ -101,7 +104,7 @@ if __name__ == '__main__':
             else:
                 expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
             os.makedirs(expr_dir, exist_ok=True)
-            csv_path = os.path.join(expr_dir, "test_metrics.csv")
+            csv_path = os.path.join(expr_dir, f"test_metrics_best_{opt.test_target}.csv")
             df.to_csv(csv_path)
             print(f"\nSaved test metrics to {csv_path}")
         except Exception as e:
@@ -148,7 +151,7 @@ if __name__ == '__main__':
             plt.ylabel('True Label')
             plt.xlabel('Predicted Label')
             plt.tight_layout()
-            cm_path = os.path.join(expr_dir, f"{opt.name}_confusion_matrix_4c.png")
+            cm_path = os.path.join(expr_dir, f"{opt.name}_confusion_matrix_4c_best_{opt.test_target}.png")
             plt.savefig(cm_path)
             
             # Plot 3-class
@@ -158,7 +161,7 @@ if __name__ == '__main__':
             plt.ylabel('True Label')
             plt.xlabel('Predicted Label')
             plt.tight_layout()
-            cm_path_3c = os.path.join(expr_dir, f"{opt.name}_confusion_matrix_3c.png")
+            cm_path_3c = os.path.join(expr_dir, f"{opt.name}_confusion_matrix_3c_best_{opt.test_target}.png")
             plt.savefig(cm_path_3c)
             
             print(f"\nSaved Confusion Matrix plots to {expr_dir}")

@@ -34,6 +34,11 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
     start = time.time()
     steps = 0
     history = []
+    
+    # Initialize Triple-Saving trackers
+    best_val_acc_2c = 0.0
+    best_val_acc_3c = 0.0
+    best_val_acc_4c = 0.0
     for e in tqdm(range(1, epochs + 1)):
         model.train()
         train_loss = 0.
@@ -117,7 +122,10 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         val_prob_all = []
         
         y_val_true_4class = []
+        y_val_true_4class = []
         y_val_pred_4class = []
+        y_val_true_3class = []
+        y_val_pred_3class = []
         
         with torch.no_grad():
             model.eval()
@@ -129,6 +137,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                 _, x_predicted = torch.max(x.data, 1)
                 
                 for b, s, t in zip(x_predicted, val_predicted, labels):
+                    t_val = t.item()
                     if b == 0:
                         pred_4c = 0
                     elif b == 2:
@@ -136,8 +145,13 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                     else:
                         pred_4c = 1 if s == 0 else 2
                     
+                    pred_3c = b.item()
+                    true_3c = 0 if t_val == 0 else (1 if t_val in [1, 2] else 2)
+                    
                     y_val_pred_4class.append(pred_4c)
-                    y_val_true_4class.append(t.item())
+                    y_val_true_4class.append(t_val)
+                    y_val_pred_3class.append(pred_3c)
+                    y_val_true_3class.append(true_3c)
 
                 mci_mask = (labels == 1) | (labels == 2)
                 if mci_mask.any():
@@ -165,6 +179,8 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         
         val_acc_4class = accuracy_score(y_val_true_4class, y_val_pred_4class)
         val_f1_4class = f1_score(y_val_true_4class, y_val_pred_4class, average='weighted')
+        val_acc_3class = accuracy_score(y_val_true_3class, y_val_pred_3class)
+        val_f1_3class = f1_score(y_val_true_3class, y_val_pred_3class, average='weighted')
         
         # In case there are no MCI samples in the validation batch (rare but possible with very small mock datasets)
         if len(y_val_true) > 0:
@@ -199,26 +215,18 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                        "val_loss": val_loss,
                        "val_acc_4class": val_acc_4class,
                        "val_f1_4class": val_f1_4class,
+                       "val_acc_3class": val_acc_3class,
+                       "val_f1_3class": val_f1_3class,
                        "val_acc": val_acc, "val_f1": val_f1_score,
                        "val_sen": val_recall, "val_spe": val_spe,
                        "val_precision": val_precision, "val_auc": val_auc
                        })
             print('Epochs: {}/{}...'.format(e + 1, epochs),
                   'Train Loss:{:.3f}...'.format(train_loss),
-                  'Train Loss_CE:{:.3f}...'.format(train_loss_CE),
-                  'Train Loss_hyb:{:.3f}...'.format(train_loss_hyb),
                   'Train Accuracy:{:.3f}...'.format(train_acc),
-                  'Train F1 Score:{:.3f}...'.format(train_f1_score),
-                  'Train SEN:{:.3f}...'.format(train_recall),
-                  'Val Loss:{:.3f}...'.format(val_loss),
                   'Val Acc 4-class:{:.3f}...'.format(val_acc_4class),
-                  'Val F1 4-class:{:.3f}...'.format(val_f1_4class),
-                  'Val Accuracy:{:.3f}...'.format(val_acc),
-                  'Val F1 Score:{:.3f}...'.format(val_f1_score),
-                  'Val SPE:{:.3f}...'.format(val_spe),
-                  'Val SEN:{:.3f}...'.format(val_recall),
-                  'Val AUC:{:.3f}...'.format(val_auc),
-                  "Val precision:{:.3f}...".format(val_precision)
+                  'Val Acc 3-class:{:.3f}...'.format(val_acc_3class),
+                  'Val Acc 2-class (MCI):{:.3f}...'.format(val_acc)
                   )
         history.append({
             'epoch': e,
@@ -227,6 +235,10 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             'train_acc': train_acc,
             'train_f1': train_f1_score,
             'val_loss': val_loss,
+            'val_acc_4class': val_acc_4class,
+            'val_f1_4class': val_f1_4class,
+            'val_acc_3class': val_acc_3class,
+            'val_f1_3class': val_f1_3class,
             'val_acc': val_acc,
             'val_f1': val_f1_score,
             'val_sen': val_recall,
@@ -234,8 +246,20 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             'val_precision': val_precision,
             'val_auc': val_auc
         })
-        if e % save_epoch_freq == 0:
-            torch.save(model.state_dict(), expr_dir + '/{}_net.pth'.format(e))
+        
+        # TRIPLE-SAVING LOGIC
+        os.makedirs(expr_dir, exist_ok=True)
+        if val_acc > best_val_acc_2c:
+            best_val_acc_2c = val_acc
+            torch.save(model.state_dict(), expr_dir + '/best_2c_net.pth')
+            
+        if val_acc_3class > best_val_acc_3c:
+            best_val_acc_3c = val_acc_3class
+            torch.save(model.state_dict(), expr_dir + '/best_3c_net.pth')
+            
+        if val_acc_4class > best_val_acc_4c:
+            best_val_acc_4c = val_acc_4class
+            torch.save(model.state_dict(), expr_dir + '/best_4c_net.pth')
 
     end = time.time()
     runing_time = end - start

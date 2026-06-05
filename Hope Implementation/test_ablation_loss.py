@@ -13,24 +13,25 @@ def main():
     losses = ['ce', 'ins2ins', 'ins2cls', 'full']
     
     for loss_type in losses:
-        print(f"\n{'='*60}")
-        print(f"TESTING LOSS ABLATION: {loss_type.upper()}")
-        print(f"FOLD(S): {args.specific_fold if args.specific_fold != -1 else 'ALL'}")
-        print(f"{'='*60}\n")
-        
-        cmd = [
-            sys.executable, "test.py",
-            "--data_dir", args.data_dir,
-            "--kfold", str(args.kfold),
-            "--specific_fold", str(args.specific_fold),
-            "--load_dir", f"./checkpoints/ablation_loss_{loss_type}",
-            "--epoch_count", "20",
-            "--name", f"ablation_loss_{loss_type}",
-            "--checkpoints_dir", "./checkpoints",
-            "--gpu_ids", "0"
-        ]
-        
-        subprocess.run(cmd, check=True)
+        for test_target in ['2c', '3c', '4c']:
+            print(f"\n{'='*60}")
+            print(f"TESTING LOSS ABLATION: {loss_type.upper()} | Target Model: best_{test_target}_net")
+            print(f"FOLD(S): {args.specific_fold if args.specific_fold != -1 else 'ALL'}")
+            print(f"{'='*60}\n")
+            
+            cmd = [
+                sys.executable, "test.py",
+                "--data_dir", args.data_dir,
+                "--kfold", str(args.kfold),
+                "--specific_fold", str(args.specific_fold),
+                "--load_dir", f"./checkpoints/ablation_loss_{loss_type}",
+                "--test_target", test_target,
+                "--name", f"ablation_loss_{loss_type}",
+                "--checkpoints_dir", "./checkpoints",
+                "--gpu_ids", "0"
+            ]
+            
+            subprocess.run(cmd, check=True)
 
 if __name__ == "__main__":
     main()

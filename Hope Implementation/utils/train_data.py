@@ -1,3 +1,5 @@
+import csv
+import os
 import time
 
 import numpy as np
@@ -121,7 +123,6 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         y_val_pred = []
         val_prob_all = []
         
-        y_val_true_4class = []
         y_val_true_4class = []
         y_val_pred_4class = []
         y_val_true_3class = []
@@ -265,8 +266,6 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
     runing_time = end - start
     print('Training time is {:.0f}m {:.0f}s'.format(runing_time // 60, runing_time % 60))
 
-    import csv
-    import os
     if len(history) > 0:
         # Save full history of all epochs
         history_path = os.path.join(expr_dir, 'history.csv')

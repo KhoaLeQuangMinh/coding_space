@@ -15,6 +15,7 @@ def main():
     # 'ins2ins' = L_CE + L_Ins2Ins
     # 'ins2cls' = L_CE + L_Ins2Ins + L_Ins2Cls
     # 'full'    = L_CE + L_Ins2Ins + L_Ins2Cls + L_Cls2Cls (RankLoss)
+    # loss_variants = ['ce', 'ins2ins', 'ins2cls', 'full']
     # loss_variants = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls']
     loss_variants = ['exp_triplet_ins2cls']
     print(f"Starting Loss Ablation Study (Table III)")

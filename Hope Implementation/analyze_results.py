@@ -32,7 +32,7 @@ import numpy as np
 # Configuration — matches your ablation scripts exactly
 # ──────────────────────────────────────────────────────────────────────
 
-LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full']
+LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls']
 EMA_VARIANTS  = ['None', '0.5', '0.8', '0.9', '0.99', '0.999']
 N_FOLDS       = 5
 
@@ -42,6 +42,8 @@ LOSS_LABELS = {
     'ins2ins': '  + L_Ins2Ins',
     'ins2cls': '    + L_Ins2Cls',
     'full':    '      + L_Cls2Cls  (HOPE)',
+    'exclude_ins2ins': 'Exclude Ins2Ins Ablation',
+    'exclude_ins2cls': 'Exclude Ins2Cls Ablation',
 }
 
 # Paper-matching row labels for Table IV
@@ -343,10 +345,10 @@ def main():
             row += f"  {get_ms(agg, cc):>{col_w}}"
         return row
 
-    # V1: 3-class — ACC is 3-class accuracy, rest from same checkpoint
-    v1_map = {'Acc 3-class': 'ACC', 'MCI AUC': 'AUC', 'F1 3-class': 'F1-score', 'MCI Prec': 'Precision', 'MCI SEN': 'Recall'}
-    # V2: 4-class — ACC is 4-class accuracy
-    v2_map = {'Acc 4-class': 'ACC', 'MCI AUC': 'AUC', 'F1 4-class': 'F1-score', 'MCI Prec': 'Precision', 'MCI SEN': 'Recall'}
+    # V1: 3-class — exclusively uses 3-class metrics
+    v1_map = {'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score', 'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}
+    # V2: 4-class — exclusively uses 4-class metrics
+    v2_map = {'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score', 'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}
 
     print(ext_row("V1", "NC / MCI / AD",        a3, v1_map))
     print(ext_row("V2", "NC / sMCI / pMCI / AD", a4, v2_map))
@@ -475,11 +477,11 @@ def main():
     all_target_defs = [
         ('2-Class (sMCI vs pMCI)', '2c', MCI_COLS),
         ('3-Class (NC / MCI / AD)', '3c', {
-            'Acc 3-class': 'ACC', 'MCI AUC': 'AUC', 'F1 3-class': 'F1-score',
-            'MCI Prec': 'Precision', 'MCI SEN': 'Recall'}),
+            'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
+            'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}),
         ('4-Class (NC/sMCI/pMCI/AD)', '4c', {
-            'Acc 4-class': 'ACC', 'MCI AUC': 'AUC', 'F1 4-class': 'F1-score',
-            'MCI Prec': 'Precision', 'MCI SEN': 'Recall'}),
+            'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
+            'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}),
     ]
 
     for label, t, cmap in all_target_defs:
@@ -508,10 +510,10 @@ def main():
         EMA_VARIANTS, EMA_LABELS, '2c', MCI_COLS, ema_agg)
 
     # Table V — V1 (3-class) and V2 (4-class) for full HOPE
-    v1_col_map = {'Acc 3-class': 'ACC', 'MCI AUC': 'AUC', 'F1 3-class': 'F1-score',
-                  'MCI Prec': 'Precision', 'MCI SEN': 'Recall'}
-    v2_col_map = {'Acc 4-class': 'ACC', 'MCI AUC': 'AUC', 'F1 4-class': 'F1-score',
-                  'MCI Prec': 'Precision', 'MCI SEN': 'Recall'}
+    v1_col_map = {'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
+                  'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}
+    v2_col_map = {'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
+                  'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}
     tableV_rows = []
     for variant_label, t, cmap in [('V1 (NC/MCI/AD)', '3c', v1_col_map),
                                     ('V2 (NC/sMCI/pMCI/AD)', '4c', v2_col_map)]:
@@ -532,40 +534,40 @@ def main():
     export_summary_csv(
         os.path.join(export_dir, 'extended_loss_ablation_3class.csv'),
         LOSS_VARIANTS, LOSS_LABELS, '3c',
-        {'Acc 3-class': 'ACC', 'MCI AUC': 'AUC', 'F1 3-class': 'F1-score',
-         'MCI Prec': 'Precision', 'MCI SEN': 'Recall'}, loss_agg)
+        {'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
+         'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}, loss_agg)
 
     # Extended Table A — Loss ablation, 4-class
     export_summary_csv(
         os.path.join(export_dir, 'extended_loss_ablation_4class.csv'),
         LOSS_VARIANTS, LOSS_LABELS, '4c',
-        {'Acc 4-class': 'ACC', 'MCI AUC': 'AUC', 'F1 4-class': 'F1-score',
-         'MCI Prec': 'Precision', 'MCI SEN': 'Recall'}, loss_agg)
+        {'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
+         'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}, loss_agg)
 
     # Extended Table B — EMA ablation, 3-class
     export_summary_csv(
         os.path.join(export_dir, 'extended_ema_ablation_3class.csv'),
         EMA_VARIANTS, EMA_LABELS, '3c',
-        {'Acc 3-class': 'ACC', 'MCI AUC': 'AUC', 'F1 3-class': 'F1-score',
-         'MCI Prec': 'Precision', 'MCI SEN': 'Recall'}, ema_agg)
+        {'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
+         'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}, ema_agg)
 
     # Extended Table B — EMA ablation, 4-class
     export_summary_csv(
         os.path.join(export_dir, 'extended_ema_ablation_4class.csv'),
         EMA_VARIANTS, EMA_LABELS, '4c',
-        {'Acc 4-class': 'ACC', 'MCI AUC': 'AUC', 'F1 4-class': 'F1-score',
-         'MCI Prec': 'Precision', 'MCI SEN': 'Recall'}, ema_agg)
+        {'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
+         'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}, ema_agg)
 
     # Extended Table C — Best model (HOPE full) complete breakdown, all 3 tasks
     tableC_rows = []
     for task_label, t, cmap in [
         ('2-Class (sMCI vs pMCI)',   '2c', MCI_COLS),
-        ('3-Class (NC/MCI/AD)',      '3c', {'Acc 3-class': 'ACC', 'MCI AUC': 'AUC',
-                                            'F1 3-class': 'F1-score', 'MCI Prec': 'Precision',
-                                            'MCI SEN': 'Recall'}),
-        ('4-Class (NC/sMCI/pMCI/AD)','4c', {'Acc 4-class': 'ACC', 'MCI AUC': 'AUC',
-                                            'F1 4-class': 'F1-score', 'MCI Prec': 'Precision',
-                                            'MCI SEN': 'Recall'}),
+        ('3-Class (NC/MCI/AD)',      '3c', {'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC',
+                                            'F1 3-class': 'F1-score', 'Prec 3-class': 'Precision',
+                                            'Recall 3-class': 'Recall'}),
+        ('4-Class (NC/sMCI/pMCI/AD)','4c', {'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC',
+                                            'F1 4-class': 'F1-score', 'Prec 4-class': 'Precision',
+                                            'Recall 4-class': 'Recall'}),
     ]:
         agg = loss_agg['full'].get(t)
         row = {'Task': task_label, 'Model': f'best_{t}_net', 'N_Folds': agg['n'] if agg else 0}

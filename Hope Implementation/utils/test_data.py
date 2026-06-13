@@ -23,8 +23,11 @@ def test_data(model, test_dataloaders, criterion):
     
     y_val_true_4class = []
     y_val_pred_4class = []
+    val_prob_4class = []
+    
     y_val_true_3class = []
     y_val_pred_3class = []
+    val_prob_3class = []
     
     with torch.no_grad():
         model.eval()
@@ -53,6 +56,19 @@ def test_data(model, test_dataloaders, criterion):
                 y_val_true_4class.append(t_val)
                 y_val_pred_3class.append(pred_3c)
                 y_val_true_3class.append(true_3c)
+            
+            # Continuous probability extraction for AUC
+            prob_3c = x.softmax(dim=-1)
+            prob_bin = outputs.softmax(dim=-1)
+            
+            prob_4c = torch.zeros(images.size(0), 4, device=x.device)
+            prob_4c[:, 0] = prob_3c[:, 0]
+            prob_4c[:, 1] = prob_3c[:, 1] * prob_bin[:, 0]
+            prob_4c[:, 2] = prob_3c[:, 1] * prob_bin[:, 1]
+            prob_4c[:, 3] = prob_3c[:, 2]
+            
+            val_prob_3class.extend(prob_3c.cpu().detach().numpy())
+            val_prob_4class.extend(prob_4c.cpu().detach().numpy())
 
             mci_mask = (labels == 1) | (labels == 2)
             if mci_mask.any():
@@ -74,11 +90,24 @@ def test_data(model, test_dataloaders, criterion):
     if len(y_val_true_4class) > 0:
         val_acc_4class = accuracy_score(y_val_true_4class, y_val_pred_4class)
         val_f1_4class = f1_score(y_val_true_4class, y_val_pred_4class, average='weighted')
+        val_prec_4class = precision_score(y_val_true_4class, y_val_pred_4class, average='weighted', zero_division=0)
+        val_rec_4class = recall_score(y_val_true_4class, y_val_pred_4class, average='weighted')
+        try:
+            val_auc_4class = roc_auc_score(y_val_true_4class, np.array(val_prob_4class), multi_class='ovr', average='weighted')
+        except ValueError:
+            val_auc_4class = 0.0
         
         val_acc_3class = accuracy_score(y_val_true_3class, y_val_pred_3class)
         val_f1_3class = f1_score(y_val_true_3class, y_val_pred_3class, average='weighted')
+        val_prec_3class = precision_score(y_val_true_3class, y_val_pred_3class, average='weighted', zero_division=0)
+        val_rec_3class = recall_score(y_val_true_3class, y_val_pred_3class, average='weighted')
+        try:
+            val_auc_3class = roc_auc_score(y_val_true_3class, np.array(val_prob_3class), multi_class='ovr', average='weighted')
+        except ValueError:
+            val_auc_3class = 0.0
     else:
-        val_acc_4class = val_f1_4class = val_acc_3class = val_f1_3class = 0.0
+        val_acc_4class = val_f1_4class = val_prec_4class = val_rec_4class = val_auc_4class = 0.0
+        val_acc_3class = val_f1_3class = val_prec_3class = val_rec_3class = val_auc_3class = 0.0
 
     # In case there are no MCI samples
     if len(y_val_true) > 0:
@@ -119,8 +148,14 @@ def test_data(model, test_dataloaders, criterion):
         'val_loss': val_loss,
         'val_acc_4class': val_acc_4class,
         'val_f1_4class': val_f1_4class,
+        'val_prec_4class': val_prec_4class,
+        'val_rec_4class': val_rec_4class,
+        'val_auc_4class': val_auc_4class,
         'val_acc_3class': val_acc_3class,
         'val_f1_3class': val_f1_3class,
+        'val_prec_3class': val_prec_3class,
+        'val_rec_3class': val_rec_3class,
+        'val_auc_3class': val_auc_3class,
         'val_acc': val_acc,
         'val_f1_score': val_f1_score,
         'val_spe': val_spe,

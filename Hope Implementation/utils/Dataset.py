@@ -20,8 +20,9 @@ def resize_volume_fast(volume: np.ndarray, target_shape=TARGET_SHAPE) -> np.ndar
     return resized.squeeze(0).squeeze(0).numpy().astype(np.float32)
 
 class Dataset(TorchDataset):
-    def __init__(self, mode="total", data_dir="data", seed=42, kfold=5, current_fold=1):
+    def __init__(self, mode="total", data_dir="data", seed=42, kfold=5, current_fold=1, return_4c=False):
         self.mode = mode
+        self.return_4c = return_4c
         
         all_files = sorted([f for f in os.listdir(data_dir) if f.endswith('.npz')])
         random.seed(seed)
@@ -71,18 +72,23 @@ class Dataset(TorchDataset):
     def __getitem__(self, index):
         data_path, string_label = self.imgs[index]
         
-        if self.mode in ["valid", "test"]:
-            value = EVAL_MAP[string_label]
-        else:
-            value = TRAIN_MAP[string_label]
-            
         sample = np.load(data_path)
         mwp1 = sample["mwp1"]
         mwp1 = np.nan_to_num(mwp1, nan=0.0)
         mwp1 = resize_volume_fast(mwp1, TARGET_SHAPE)
-        
         A = torch.from_numpy(mwp1).type(torch.FloatTensor)
-        return A.unsqueeze(0), value
+        
+        if self.mode in ["valid", "test"]:
+            value = EVAL_MAP[string_label]
+            if self.return_4c:
+                return A.unsqueeze(0), value, value # For valid/test, 3c and 4c are both handled downstream if needed, though typically unused
+            return A.unsqueeze(0), value
+        else:
+            value = TRAIN_MAP[string_label]
+            if self.return_4c:
+                value_4c = EVAL_MAP[string_label]
+                return A.unsqueeze(0), value, value_4c
+            return A.unsqueeze(0), value
 
     def __len__(self):
         return len(self.imgs)

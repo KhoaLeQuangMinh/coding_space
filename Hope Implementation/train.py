@@ -35,9 +35,10 @@ def run_fold(opt, current_fold):
     criterionRank = RankLoss(opt.interpolation_lambda)
 
     # dataset preparation
-    total_cn_dataset = Dataset(mode="total_cn", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold)
-    total_ad_dataset = Dataset(mode="total_ad", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold)
-    total_mci_dataset = Dataset(mode="total_mci", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold)
+    return_4c = (opt.ablation_loss == 'exp_triplet_ins2cls')
+    total_cn_dataset = Dataset(mode="total_cn", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold, return_4c=return_4c)
+    total_ad_dataset = Dataset(mode="total_ad", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold, return_4c=return_4c)
+    total_mci_dataset = Dataset(mode="total_mci", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold, return_4c=return_4c)
     valid_dataset = Dataset(mode="valid", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold)
 
     # training loader (random sample data in a stratified manner)

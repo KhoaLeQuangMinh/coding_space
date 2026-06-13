@@ -53,26 +53,43 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         y_train_pred = []
         cn_iterator = iter(total_cn_loader)
         mci_iterator = iter(total_mci_loader)
-        for ii, (imgs_ad, labels_ad) in enumerate(total_ad_loader):
+        for ii, batch_ad in enumerate(total_ad_loader):
+            imgs_ad = batch_ad[0]
+            labels_ad = batch_ad[1]
+            labels_ad_4c = batch_ad[2] if len(batch_ad) > 2 else None
+            
             steps += 1
             try:
-                imgs_cn, labels_cn = next(cn_iterator)
-                imgs_mci, labels_mci = next(mci_iterator)
+                batch_cn = next(cn_iterator)
+                imgs_cn, labels_cn = batch_cn[0], batch_cn[1]
+                labels_cn_4c = batch_cn[2] if len(batch_cn) > 2 else None
+                
+                batch_mci = next(mci_iterator)
+                imgs_mci, labels_mci = batch_mci[0], batch_mci[1]
+                labels_mci_4c = batch_mci[2] if len(batch_mci) > 2 else None
             except StopIteration:
                 cn_iterator = iter(total_cn_loader)
                 mci_iterator = iter(total_mci_loader)
-                imgs_cn, labels_cn = next(cn_iterator)
-                imgs_mci, labels_mci = next(mci_iterator)
+                
+                batch_cn = next(cn_iterator)
+                imgs_cn, labels_cn = batch_cn[0], batch_cn[1]
+                labels_cn_4c = batch_cn[2] if len(batch_cn) > 2 else None
+                
+                batch_mci = next(mci_iterator)
+                imgs_mci, labels_mci = batch_mci[0], batch_mci[1]
+                labels_mci_4c = batch_mci[2] if len(batch_mci) > 2 else None
 
             imgs = torch.cat((imgs_cn, imgs_mci, imgs_ad))
             labels = torch.cat((labels_cn, labels_mci, labels_ad))
             images = imgs.cuda(non_blocking=True)
             labels = labels.cuda(non_blocking=True)
+            labels_4c = torch.cat((labels_cn_4c, labels_mci_4c, labels_ad_4c)).cuda(non_blocking=True) if labels_ad_4c is not None else None
+            
             optimizer.zero_grad()
             features, outputs, _ = model.forward(images)
 
             # basic computing
-            compactness_loss, separation_loss, mus = basiccomputing(features, labels)
+            compactness_loss, separation_loss, mus, triplet_ins2cls = basiccomputing(features, labels, labels_4c)
 
             # CE loss
             loss_CE = criterion(outputs, labels)
@@ -92,6 +109,8 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                 loss_hyb = loss_ins2cls + loss_cls2cls
             elif ablation_loss == 'exclude_ins2cls':
                 loss_hyb = loss_ins2ins + loss_cls2cls
+            elif ablation_loss == 'exp_triplet_ins2cls':
+                loss_hyb = loss_ins2ins + (triplet_ins2cls / features.shape[1]) + loss_cls2cls
             else: # 'full'
                 loss_hyb = loss_ins2ins + loss_ins2cls + loss_cls2cls
 

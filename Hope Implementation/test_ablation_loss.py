@@ -10,8 +10,8 @@ def main():
     parser.add_argument('--data_dir', type=str, default='/kaggle/input/datasets/kisokoghan/paired-npz/paired_npz', help='Path to NPZ data')
     args = parser.parse_args()
 
-    # losses = ['ce', 'ins2ins', 'ins2cls', 'full']
-    losses = ['exclude_ins2ins', 'exclude_ins2cls']
+    # losses = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls']
+    losses = ['exp_triplet_ins2cls']
     
     for loss_type in losses:
         for test_target in ['2c', '3c', '4c']:

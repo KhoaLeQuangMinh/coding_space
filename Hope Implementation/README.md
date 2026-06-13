@@ -2,46 +2,53 @@
 
 This folder contains an adaptation of the original HOPE framework configured to load `.npz` files directly and perform reproducible K-Fold cross-validation.
 
-## How to Run the Code
+## How to Run the Reproducible Pipeline
 
-**1. Weights & Biases Authentication (WandB)**
-Ensure you have authenticated your wandb account. The script logs 4-class metrics and original HOPE metrics securely to WandB.
-If you haven't logged in, run:
+This fork introduces a robust, mathematically isolated 5-fold cross-validation pipeline designed for distributed Kaggle environments.
+
+### 1. Weights & Biases Authentication (WandB)
+Ensure you have authenticated your wandb account. The script securely logs real-time validation metrics during training.
 ```bash
 wandb login <YOUR_API_KEY>
 ```
 
-**2. Training with K-Fold**
-To train the model on your dataset, run `train.py` inside this folder (`Hope Implementation`), passing the directory containing your `.npz` files using `--data_dir`. You can set the number of folds using `--kfold` (default is 5).
+### 2. Training with K-Fold
+To train the model, run `train.py` using `--data_dir`. You can set the number of folds using `--kfold` (default is 5).
 
-Example Training Command:
 ```bash
 python train.py \
     --name hope_replicated \
-    --data_dir /Users/khoale/Desktop/Coding_Space/data \
+    --data_dir /kaggle/input/datasets/kisokoghan/paired-npz/paired_npz \
     --checkpoints_dir ./checkpoints \
     --kfold 5 \
-    --batch_size 4 \
+    --batch_size 8 \
     --epoch_count 60 \
-    --seed 42 \
-    --gpu_ids -1  # (use 0 or 0,1 for GPU)
+    --gpu_ids 0
 ```
-*Note: The script will automatically perform an 80/20 train-val/test split via K-Fold, and internally split the 80% into 70% Train and 10% Valid for each fold. For each fold, it will save the model weights to `--checkpoints_dir`.*
+**Validation Logic:** The script automatically performs an 80/20 train-test split via K-Fold. It further splits the 80% into 70% Train and 10% Valid. 
+During training, the script evaluates the validation set and independently saves the 3 best model variants (`best_2c_net.pth`, `best_3c_net.pth`, `best_4c_net.pth`) for each fold based on their respective task accuracy.
 
-**3. Testing / Evaluation**
-After training, you can evaluate the models on the held-out 20% test sets using `test.py`. It will test all K folds sequentially.
+### 3. Testing the Ablation Experiments
+After training all variants across your folds, you can evaluate them on the strictly isolated 20% test sets using the automated scripts.
+If you are running on a distributed Kaggle environment where you only have certain folds downloaded, use the `--specific_fold` argument. The script will gracefully skip any missing weights.
 
-Example Testing Command:
 ```bash
-python test.py \
-    --name hope_replicated \
-    --data_dir /Users/khoale/Desktop/Coding_Space/data \
-    --load_dir ./checkpoints/hope_replicated \
-    --kfold 5 \
-    --batch_size 4 \
-    --seed 42 \
-    --gpu_ids -1
+# Test specific folds for the Loss Ablation experiment
+python test_ablation_loss.py --kfold 5 --specific_fold 1
+python test_ablation_loss.py --kfold 5 --specific_fold 2
+
+# Test specific folds for the EMA Momentum Ablation experiment
+python test_ablation_ema.py --kfold 5 --specific_fold 1
 ```
+**Testing Math:** The testing script fundamentally isolates the mathematical evaluation of the 3-class and 4-class tasks. 4-class continuous probabilities are derived using the 3-class linear classifier and the EMA prototype cosine similarity distance. No metrics are cross-contaminated.
+
+### 4. Generating the Final Tables
+Once you have generated the testing CSVs across your folds, combine them into your `./checkpoints` directory and run the analyzer:
+
+```bash
+python analyze_results.py
+```
+This script aggregates all the `test_metrics_best_*.csv` files, calculates the mean and standard deviation across the 5 folds, and spits out clean, ready-to-publish summary CSV tables (e.g., Table III, Table IV, Table V) into the `./all_results/` folder.
 
 ---
 

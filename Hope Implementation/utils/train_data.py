@@ -128,7 +128,10 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             # loss logging
             train_loss_CE += loss_CE.item()
             train_loss_ins2ins += loss_ins2ins.item()
-            train_loss_ins2cls += loss_ins2cls.item()
+            if ablation_loss == 'exp_triplet_ins2cls':
+                train_loss_ins2cls += (triplet_ins2cls / features.shape[1]).item()
+            else:
+                train_loss_ins2cls += loss_ins2cls.item()
             train_loss_cls2cls += loss_cls2cls.item()
             train_loss_hyb += loss_hyb.item()
             train_loss += loss.item()

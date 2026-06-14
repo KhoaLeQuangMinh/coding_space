@@ -32,7 +32,7 @@ import numpy as np
 # Configuration — matches your ablation scripts exactly
 # ──────────────────────────────────────────────────────────────────────
 
-LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls']
+LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls']
 EMA_VARIANTS  = ['None', '0.5', '0.8', '0.9', '0.99', '0.999']
 N_FOLDS       = 5
 
@@ -44,6 +44,7 @@ LOSS_LABELS = {
     'full':    '      + L_Cls2Cls  (HOPE)',
     'exclude_ins2ins': 'Exclude Ins2Ins Ablation',
     'exclude_ins2cls': 'Exclude Ins2Cls Ablation',
+    'exp_triplet_ins2cls': 'Triplet Ins2Cls (Poles)',
 }
 
 # Paper-matching row labels for Table IV
@@ -67,19 +68,19 @@ MCI_COLS = {
 }
 # 3-class metrics
 CLS3_COLS = {
-    'Acc 3-class': 'ACC',
-    'MCI AUC':     'AUC',      # best proxy available
-    'F1 3-class':  'F1-score',
-    'MCI Prec':    'Precision',
-    'MCI SEN':     'Recall',
+    'Acc 3-class':    'ACC',
+    'AUC 3-class':    'AUC',
+    'F1 3-class':     'F1-score',
+    'Prec 3-class':   'Precision',
+    'Recall 3-class': 'Recall',
 }
 # 4-class metrics
 CLS4_COLS = {
-    'Acc 4-class': 'ACC',
-    'MCI AUC':     'AUC',
-    'F1 4-class':  'F1-score',
-    'MCI Prec':    'Precision',
-    'MCI SEN':     'Recall',
+    'Acc 4-class':    'ACC',
+    'AUC 4-class':    'AUC',
+    'F1 4-class':     'F1-score',
+    'Prec 4-class':   'Precision',
+    'Recall 4-class': 'Recall',
 }
 
 

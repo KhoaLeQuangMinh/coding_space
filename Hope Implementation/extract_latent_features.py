@@ -52,7 +52,7 @@ def main():
                     
                 print(f"Extracting: {variant} | {ckpt_name} | Fold {fold}")
                 
-                model = resnet18(class_num=3)
+                model = resnet18(spatial_size=128, sample_duration=128, num_classes=3, m=0.99)
                 state_dict = torch.load(ckpt_path, map_location='cpu')
                 model.load_state_dict(state_dict, strict=False)
                 

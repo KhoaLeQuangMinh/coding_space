@@ -9,15 +9,19 @@ from sklearn.manifold import TSNE
 # Configuration
 # ──────────────────────────────────────────────────────────────────────
 # Matches the extracted features from your Kaggle output
-csv_dir = '/Users/khoale/Downloads/analysis_output/extracted_features'
-out_dir = './analysis_output/tsne_plots'
+csv_dir = '/Users/khoale/Downloads/analysis_output_tSNE/extracted_features'
+out_dir = '/Users/khoale/Downloads/analysis_output_tSNE'
 os.makedirs(out_dir, exist_ok=True)
 
-# Define the models we want to plot (e.g., ce and your triplet method)
-VARIANTS_TO_PLOT = ['ce', 'exp_triplet_ins2cls', 'triplet_only']
+# Define the models we want to plot
+VARIANTS_TO_PLOT = [
+    'ce', 'ins2ins', 'ins2cls', 'full', 
+    'exclude_ins2ins', 'exclude_ins2cls', 
+    'exp_triplet_ins2cls', 'triplet_only'
+]
 
-# We are analyzing the 'best_2c_net'
-checkpoint_name = 'best_2c_net'
+# Checkpoints to analyze
+CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']
 
 # Strict coloring to maintain consistency with previous plots
 palette = {
@@ -27,8 +31,8 @@ palette = {
     'AD': '#d62728'      # Red
 }
 
-def plot_tsne_for_variant(variant):
-    print(f"\nProcessing t-SNE for {variant}...")
+def plot_tsne_for_variant(variant, checkpoint_name):
+    print(f"\nProcessing t-SNE for {variant} ({checkpoint_name})...")
     
     # 1. Load data from all 5 folds
     all_features = []
@@ -51,7 +55,7 @@ def plot_tsne_for_variant(variant):
         all_labels.extend(df['True Label'].tolist())
         
     if not all_features:
-        print(f"No feature data found for {variant}. Did you run the updated extract_latent_features.py?")
+        print(f"No feature data found for {variant} {checkpoint_name}. Did you run the updated extract_latent_features.py?")
         return
         
     # Combine all folds into a single massive array
@@ -62,7 +66,7 @@ def plot_tsne_for_variant(variant):
     
     # 2. Run t-SNE Optimization
     print("  -> Running t-SNE optimization (this might take a few seconds)...")
-    tsne = TSNE(n_components=2, random_state=42, perplexity=30, max_iter=1000)
+    tsne = TSNE(n_components=2, random_state=42, perplexity=30, method='exact')
     X_tsne = tsne.fit_transform(X)
     
     # 3. Create DataFrame for plotting
@@ -105,8 +109,9 @@ def plot_tsne_for_variant(variant):
 
 def main():
     print("Starting t-SNE Generation Pipeline...")
-    for variant in VARIANTS_TO_PLOT:
-        plot_tsne_for_variant(variant)
+    for ckpt in CHECKPOINTS:
+        for variant in VARIANTS_TO_PLOT:
+            plot_tsne_for_variant(variant, ckpt)
     print("\nFinished!")
 
 if __name__ == '__main__':

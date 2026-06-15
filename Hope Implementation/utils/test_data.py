@@ -38,19 +38,25 @@ def test_data(model, test_dataloaders, criterion):
             _, val_predicted = torch.max(outputs.data, 1)
             _, x_predicted = torch.max(x.data, 1)
             
+            num_classes = model.module.num_classes if hasattr(model, 'module') else model.num_classes
             for b, s, t in zip(x_predicted, val_predicted, labels):
                 t_val = t.item()
-                # 4-class mapping
-                if b == 0:
-                    pred_4c = 0
-                elif b == 2:
-                    pred_4c = 3
-                else:
-                    pred_4c = 1 if s == 0 else 2
-                
-                # 3-class mapping
-                pred_3c = b.item()
-                true_3c = 0 if t_val == 0 else (1 if t_val in [1, 2] else 2)
+                if num_classes == 3:
+                    # 4-class mapping
+                    if b == 0:
+                        pred_4c = 0
+                    elif b == 2:
+                        pred_4c = 3
+                    else:
+                        pred_4c = 1 if s == 0 else 2
+                    
+                    # 3-class mapping
+                    pred_3c = b.item()
+                    true_3c = 0 if t_val == 0 else (1 if t_val in [1, 2] else 2)
+                else: # num_classes == 4
+                    pred_4c = b.item()
+                    pred_3c = 0 if pred_4c == 0 else (1 if pred_4c in [1, 2] else 2)
+                    true_3c = 0 if t_val == 0 else (1 if t_val in [1, 2] else 2)
                 
                 y_val_pred_4class.append(pred_4c)
                 y_val_true_4class.append(t_val)
@@ -58,21 +64,31 @@ def test_data(model, test_dataloaders, criterion):
                 y_val_true_3class.append(true_3c)
             
             # Continuous probability extraction for AUC
-            prob_3c = x.softmax(dim=-1)
             prob_bin = outputs.softmax(dim=-1)
             
-            prob_4c = torch.zeros(images.size(0), 4, device=x.device)
-            prob_4c[:, 0] = prob_3c[:, 0]
-            prob_4c[:, 1] = prob_3c[:, 1] * prob_bin[:, 0]
-            prob_4c[:, 2] = prob_3c[:, 1] * prob_bin[:, 1]
-            prob_4c[:, 3] = prob_3c[:, 2]
+            if num_classes == 3:
+                prob_3c = x.softmax(dim=-1)
+                prob_4c = torch.zeros(images.size(0), 4, device=x.device)
+                prob_4c[:, 0] = prob_3c[:, 0]
+                prob_4c[:, 1] = prob_3c[:, 1] * prob_bin[:, 0]
+                prob_4c[:, 2] = prob_3c[:, 1] * prob_bin[:, 1]
+                prob_4c[:, 3] = prob_3c[:, 2]
+            else:
+                prob_4c = x.softmax(dim=-1)
+                prob_3c = torch.zeros(images.size(0), 3, device=x.device)
+                prob_3c[:, 0] = prob_4c[:, 0]
+                prob_3c[:, 1] = prob_4c[:, 1] + prob_4c[:, 2]
+                prob_3c[:, 2] = prob_4c[:, 3]
             
             val_prob_3class.extend(prob_3c.cpu().detach().numpy())
             val_prob_4class.extend(prob_4c.cpu().detach().numpy())
 
             mci_mask = (labels == 1) | (labels == 2)
             if mci_mask.any():
-                mci_outputs = outputs[mci_mask]
+                if num_classes == 4:
+                    mci_outputs = x[mci_mask][:, 1:3]  # Extract logits for sMCI (1) and pMCI (2)
+                else:
+                    mci_outputs = outputs[mci_mask]
                 mci_labels = labels[mci_mask] - 1  # 1->0, 2->1
                 loss = criterion(mci_outputs, mci_labels)
                 val_loss += loss.item() * mci_labels.size(0)

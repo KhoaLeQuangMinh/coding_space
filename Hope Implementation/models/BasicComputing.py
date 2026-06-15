@@ -59,9 +59,9 @@ class BasicComputing(nn.Module):
         # EXPERIMENTAL: Relative Distance (Triplet) Instance-to-Class Loss
         triplet_ins2cls = torch.tensor(0.0, device=features.device)
         
-        if labels_4c is not None and 0 in means_dict and 2 in means_dict:
+        if labels_4c is not None and 0 in means_dict and (self.class_num - 1) in means_dict:
             mean_cn = means_dict[0]
-            mean_ad = means_dict[2]
+            mean_ad = means_dict[self.class_num - 1]
             
             # Left side: CN (0) and sMCI (1) -> Target CN, Opp AD
             idx_left = torch.nonzero((labels_4c == 0) | (labels_4c == 1)).reshape(-1)

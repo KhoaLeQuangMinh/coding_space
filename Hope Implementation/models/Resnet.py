@@ -151,7 +151,7 @@ class ResNet(nn.Module):
         self.cos = torch.nn.CosineSimilarity(dim=1)
 
         # initialize the ema prototype
-        self.prototypes = torch.nn.functional.normalize(nn.Parameter(torch.zeros(3, 128), requires_grad=False), p=2,
+        self.prototypes = torch.nn.functional.normalize(nn.Parameter(torch.zeros(num_classes, 128), requires_grad=False), p=2,
                                                         dim=1).cuda()
         for m in self.modules():
             if isinstance(m, nn.Conv3d):
@@ -187,18 +187,15 @@ class ResNet(nn.Module):
 
     # online ema prototype update scheme
     def update(self, features, labels):
-        indices_0 = torch.nonzero(labels == 0).squeeze()
-        indices_1 = torch.nonzero(labels == 1).squeeze()
-        indices_2 = torch.nonzero(labels == 2).squeeze()
-        tensors_with_label_0 = features[indices_0]
-        tensors_with_label_1 = features[indices_1]
-        tensors_with_label_2 = features[indices_2]
-        tmp_tensor_0 = torch.nn.functional.normalize(tensors_with_label_0.mean(dim=0), p=2, dim=0)
-        tmp_tensor_1 = torch.nn.functional.normalize(tensors_with_label_1.mean(dim=0), p=2, dim=0)
-        tmp_tensor_2 = torch.nn.functional.normalize(tensors_with_label_2.mean(dim=0), p=2, dim=0)
-        self.prototypes[0] = self.prototypes[0] * self.m + (1 - self.m) * tmp_tensor_0
-        self.prototypes[1] = self.prototypes[1] * self.m + (1 - self.m) * tmp_tensor_1
-        self.prototypes[2] = self.prototypes[2] * self.m + (1 - self.m) * tmp_tensor_2
+        for cls_id in range(self.num_classes):
+            indices = torch.nonzero(labels == cls_id).squeeze()
+            if indices.numel() > 0:
+                # Handle single-element case
+                if indices.dim() == 0:
+                    indices = indices.unsqueeze(0)
+                tensors_with_label = features[indices]
+                tmp_tensor = torch.nn.functional.normalize(tensors_with_label.mean(dim=0), p=2, dim=0)
+                self.prototypes[cls_id] = self.prototypes[cls_id] * self.m + (1 - self.m) * tmp_tensor
         self.prototypes = torch.nn.functional.normalize(self.prototypes, p=2, dim=1)
         return
 
@@ -226,7 +223,7 @@ class ResNet(nn.Module):
         x_ori_norm = torch.nn.functional.normalize(x_ori, p=2, dim=1)
         # prototype comparison
         spmci_prob = torch.softmax(torch.cat((self.cos(x_ori_norm, self.prototypes[0]), self.cos(x_ori_norm,
-                                                                                                 self.prototypes[2])),
+                                                                                                 self.prototypes[self.num_classes - 1])),
                                              dim=0).reshape(2, x.shape[0]), dim=0)
         spmci_prob = torch.transpose(spmci_prob, 0, 1)
         return x_ori, x, spmci_prob

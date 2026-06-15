@@ -20,10 +20,12 @@ def compute_1d_severity(features, proto_CN, proto_AD):
     return severity.cpu().numpy()
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='../data', help='path to npz files')
+    parser = argparse.ArgumentParser(description="Extract and save latent features for visualization/t-SNE.")
+    parser.add_argument('--data_dir', type=str, default='/kaggle/input/datasets/kisokoghan/paired-npz/paired_npz', help='Path to NPZ data')
     parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='path to checkpoints')
     parser.add_argument('--out_dir', type=str, default='./analysis_output/extracted_features', help='where to save CSVs')
+    parser.add_argument('--num_classes', type=int, default=3, help='Number of classes for classification')
+    parser.add_argument('--kfold', type=int, default=5, help='Number of folds used during training')
     opt = parser.parse_args()
 
     os.makedirs(opt.out_dir, exist_ok=True)
@@ -57,7 +59,7 @@ def main():
                     
                 print(f"Extracting: {variant} | {ckpt_name} | Fold {fold}")
                 
-                model = resnet18(spatial_size=128, sample_duration=128, num_classes=3, m=0.99)
+                model = resnet18(spatial_size=128, sample_duration=128, num_classes=opt.num_classes, m=0.99)
                 state_dict = torch.load(ckpt_path, map_location='cpu')
                 model.load_state_dict(state_dict, strict=False)
                 

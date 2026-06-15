@@ -85,6 +85,10 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             labels = labels.cuda(non_blocking=True)
             labels_4c = torch.cat((labels_cn_4c, labels_mci_4c, labels_ad_4c)).cuda(non_blocking=True) if labels_ad_4c is not None else None
             
+            num_classes = model.module.num_classes if hasattr(model, 'module') else model.num_classes
+            if num_classes == 4 and labels_4c is not None:
+                labels = labels_4c
+            
             optimizer.zero_grad()
             features, outputs, _ = model.forward(images)
 
@@ -97,7 +101,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             # Hybrid-granularity ordinal loss (Ablation Control)
             loss_ins2ins = criterionRank(features, labels)  # instance-to-instance loss
             loss_ins2cls = compactness_loss / features.shape[1]  # instance-to-class loss
-            loss_cls2cls = features.shape[1] / separation_loss + criterionRank(mus, torch.tensor([0, 1, 2]).cuda())
+            loss_cls2cls = features.shape[1] / separation_loss + criterionRank(mus, torch.arange(num_classes).float().cuda())
             
             if ablation_loss == 'ce':
                 loss_hyb = torch.tensor(0.0, device=loss_CE.device)
@@ -182,9 +186,11 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                     y_val_pred_3class.append(pred_3c)
                     y_val_true_3class.append(true_3c)
 
-                mci_mask = (labels == 1) | (labels == 2)
                 if mci_mask.any():
-                    mci_outputs = outputs[mci_mask]
+                    if num_classes == 4:
+                        mci_outputs = x[mci_mask][:, 1:3]  # Extract logits for sMCI (1) and pMCI (2)
+                    else:
+                        mci_outputs = outputs[mci_mask]
                     mci_labels = labels[mci_mask] - 1  # 1->0, 2->1
                     loss = criterion(mci_outputs, mci_labels)
                     val_loss += loss.item() * mci_labels.size(0)

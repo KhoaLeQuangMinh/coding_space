@@ -30,6 +30,58 @@ class BasicComputing(nn.Module):
         loss = torch.nn.functional.relu(dist_target - dist_opp + margin)
         return torch.sum(loss)
 
+    # compute the hierarchical ordinal triplet loss
+    def compute_hierarchical_triplet(self, features, labels_4c):
+        if labels_4c is None:
+            return torch.tensor(0.0, device=features.device)
+            
+        means_4c = {}
+        for i in range(4):
+            idx = torch.nonzero(labels_4c == i).reshape(-1)
+            if idx.numel() > 0:
+                means_4c[i] = self.compute_mean(features.index_select(0, idx))
+                
+        loss = torch.tensor(0.0, device=features.device)
+        
+        # 1. CN should be closer to CN than sMCI
+        if 0 in means_4c and 1 in means_4c:
+            idx_cn = torch.nonzero(labels_4c == 0).reshape(-1)
+            if idx_cn.numel() > 0:
+                loss += self.compute_relative_loss(features.index_select(0, idx_cn), target_mean=means_4c[0], opp_mean=means_4c[1])
+                
+        # 2. sMCI should be closer to sMCI than CN
+        if 1 in means_4c and 0 in means_4c:
+            idx_smci = torch.nonzero(labels_4c == 1).reshape(-1)
+            if idx_smci.numel() > 0:
+                loss += self.compute_relative_loss(features.index_select(0, idx_smci), target_mean=means_4c[1], opp_mean=means_4c[0])
+
+        # 3. AD should be closer to AD than pMCI
+        if 3 in means_4c and 2 in means_4c:
+            idx_ad = torch.nonzero(labels_4c == 3).reshape(-1)
+            if idx_ad.numel() > 0:
+                loss += self.compute_relative_loss(features.index_select(0, idx_ad), target_mean=means_4c[3], opp_mean=means_4c[2])
+
+        # 4. pMCI should be closer to pMCI than AD
+        if 2 in means_4c and 3 in means_4c:
+            idx_pmci = torch.nonzero(labels_4c == 2).reshape(-1)
+            if idx_pmci.numel() > 0:
+                loss += self.compute_relative_loss(features.index_select(0, idx_pmci), target_mean=means_4c[2], opp_mean=means_4c[3])
+
+        # 5. CN, sMCI closer to CN than AD
+        if 0 in means_4c and 3 in means_4c:
+            idx_left = torch.nonzero((labels_4c == 0) | (labels_4c == 1)).reshape(-1)
+            if idx_left.numel() > 0:
+                loss += self.compute_relative_loss(features.index_select(0, idx_left), target_mean=means_4c[0], opp_mean=means_4c[3])
+
+        # 6. AD, pMCI closer to AD than CN
+        if 3 in means_4c and 0 in means_4c:
+            idx_right = torch.nonzero((labels_4c == 2) | (labels_4c == 3)).reshape(-1)
+            if idx_right.numel() > 0:
+                loss += self.compute_relative_loss(features.index_select(0, idx_right), target_mean=means_4c[3], opp_mean=means_4c[0])
+
+        return loss
+
+
     def __call__(self, features, labels, labels_4c=None):
         compactness_losslist = []
         separation_losslist = []
@@ -77,4 +129,7 @@ class BasicComputing(nn.Module):
                 loss_right = self.compute_relative_loss(x_right, target_mean=mean_ad, opp_mean=mean_cn, margin=0.0)
                 triplet_ins2cls += loss_right
 
-        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls
+        # EXPERIMENTAL 2: Hierarchical Ordinal Triplet Loss
+        hierarchical_triplet_ins2cls = self.compute_hierarchical_triplet(features, labels_4c)
+
+        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls

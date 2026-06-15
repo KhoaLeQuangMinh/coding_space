@@ -93,7 +93,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             features, outputs, _ = model.forward(images)
 
             # basic computing
-            compactness_loss, separation_loss, mus, triplet_ins2cls = basiccomputing(features, labels, labels_4c)
+            compactness_loss, separation_loss, mus, triplet_ins2cls, hierarchical_triplet_ins2cls = basiccomputing(features, labels, labels_4c)
 
             # CE loss
             loss_CE = criterion(outputs, labels)
@@ -117,6 +117,10 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                 loss_hyb = loss_ins2ins + (triplet_ins2cls / features.shape[1]) + loss_cls2cls
             elif ablation_loss == 'triplet_only':
                 loss_hyb = (triplet_ins2cls / features.shape[1])
+            elif ablation_loss == 'exp_hierarchical_triplet_ins2cls':
+                loss_hyb = loss_ins2ins + (hierarchical_triplet_ins2cls / features.shape[1]) + loss_cls2cls
+            elif ablation_loss == 'hierarchical_triplet_only':
+                loss_hyb = (hierarchical_triplet_ins2cls / features.shape[1])
             else: # 'full'
                 loss_hyb = loss_ins2ins + loss_ins2cls + loss_cls2cls
 

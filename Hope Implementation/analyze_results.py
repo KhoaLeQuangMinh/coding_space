@@ -244,8 +244,7 @@ def export_summary_csv(path, variants, row_labels, test_target, col_map, all_agg
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--results_dir', type=str,
-        default='/Users/khoale/Downloads/all_result/working/coding_space/Hope Implementation/checkpoints')
+    parser.add_argument('--results_dir', type=str, default='./checkpoints')
     parser.add_argument('--export_dir', type=str, default=None)
     args = parser.parse_args()
 

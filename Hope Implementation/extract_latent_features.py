@@ -33,7 +33,11 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only']
+    # The same variants used in training
+    # loss_variants = ['ce', 'ins2ins', 'ins2cls', 'full']
+    # loss_variants = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls']
+    LOSS_VARIANTS = ['full', 'exp_triplet_ins2cls', 'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls']
+    
     if opt.target_loss != 'all':
         LOSS_VARIANTS = [opt.target_loss]
     # EMA_VARIANTS = ['0.1', '0.5', '0.9', '0.99', '0.999']

@@ -9,6 +9,7 @@ def main():
     parser.add_argument('--specific_fold', type=int, default=-1, help='Distributed execution: run only this specific fold (1-based)')
     parser.add_argument('--data_dir', type=str, default='/kaggle/input/datasets/kisokoghan/paired-npz/paired_npz', help='Path to NPZ data')
     parser.add_argument('--num_classes', type=int, default=3, help='Number of classes for classification')
+    parser.add_argument('--target_loss', type=str, default='all', help='Specific loss variant to run (e.g., full or exp_triplet_ins2cls). Defaults to all variants.')
     args = parser.parse_args()
 
     # Table III Loss Variants
@@ -19,6 +20,9 @@ def main():
     # loss_variants = ['ce', 'ins2ins', 'ins2cls', 'full']
     # loss_variants = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls']
     loss_variants = ['full', 'exp_triplet_ins2cls']
+    if args.target_loss != 'all':
+        loss_variants = [args.target_loss]
+        
     print(f"Starting Loss Ablation Study (Table III)")
     print(f"K-Fold Split: {args.kfold}")
     print(f"Specific Fold Target: {args.specific_fold if args.specific_fold != -1 else 'ALL'}")

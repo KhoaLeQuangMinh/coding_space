@@ -186,6 +186,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                     y_val_pred_3class.append(pred_3c)
                     y_val_true_3class.append(true_3c)
 
+                mci_mask = (labels == 1) | (labels == 2)
                 if mci_mask.any():
                     if num_classes == 4:
                         mci_outputs = x[mci_mask][:, 1:3]  # Extract logits for sMCI (1) and pMCI (2)

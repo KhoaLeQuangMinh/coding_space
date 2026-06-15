@@ -75,6 +75,7 @@ def main():
                 loader = test_loaders[fold]
                 fold_severities = []
                 fold_labels = []
+                fold_features = []
                 
                 with torch.no_grad():
                     for batch in loader:
@@ -84,12 +85,20 @@ def main():
                         severity = compute_1d_severity(x_ori, proto_cn, proto_ad)
                         fold_severities.extend(severity.tolist())
                         fold_labels.extend(labels_4c.tolist())
+                        fold_features.extend(x_ori.cpu().detach().numpy().tolist())
                 
                 # Save this specific fold's data to a tiny CSV
-                df = pd.DataFrame({
+                df_data = {
                     'Severity': fold_severities,
                     'True Label': [class_names[lbl] for lbl in fold_labels]
-                })
+                }
+                
+                # Add the 512 raw features as individual columns
+                fold_features_np = np.array(fold_features)
+                for i in range(fold_features_np.shape[1]):
+                    df_data[f'feature_{i}'] = fold_features_np[:, i]
+                    
+                df = pd.DataFrame(df_data)
                 csv_name = f"{variant}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
                 df.to_csv(os.path.join(opt.out_dir, csv_name), index=False)
                 print(f"  -> Saved {csv_name}")

@@ -32,7 +32,7 @@ import numpy as np
 # Configuration — matches your ablation scripts exactly
 # ──────────────────────────────────────────────────────────────────────
 
-LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls']
+LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only']
 EMA_VARIANTS  = ['None', '0.5', '0.8', '0.9', '0.99', '0.999']
 N_FOLDS       = 5
 
@@ -45,6 +45,7 @@ LOSS_LABELS = {
     'exclude_ins2ins': 'Exclude Ins2Ins Ablation',
     'exclude_ins2cls': 'Exclude Ins2Cls Ablation',
     'exp_triplet_ins2cls': 'Triplet Ins2Cls (Poles)',
+    'triplet_only': 'CE + Triplet Only',
 }
 
 # Paper-matching row labels for Table IV

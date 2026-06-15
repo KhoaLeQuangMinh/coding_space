@@ -111,6 +111,8 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                 loss_hyb = loss_ins2ins + loss_cls2cls
             elif ablation_loss == 'exp_triplet_ins2cls':
                 loss_hyb = loss_ins2ins + (triplet_ins2cls / features.shape[1]) + loss_cls2cls
+            elif ablation_loss == 'triplet_only':
+                loss_hyb = (triplet_ins2cls / features.shape[1])
             else: # 'full'
                 loss_hyb = loss_ins2ins + loss_ins2cls + loss_cls2cls
 
@@ -128,7 +130,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             # loss logging
             train_loss_CE += loss_CE.item()
             train_loss_ins2ins += loss_ins2ins.item()
-            if ablation_loss == 'exp_triplet_ins2cls':
+            if ablation_loss in ['exp_triplet_ins2cls', 'triplet_only']:
                 train_loss_ins2cls += (triplet_ins2cls / features.shape[1]).item()
             else:
                 train_loss_ins2cls += loss_ins2cls.item()

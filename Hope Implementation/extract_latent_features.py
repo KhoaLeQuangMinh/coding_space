@@ -30,7 +30,12 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls']
+    LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only']
+    # EMA_VARIANTS = ['0.1', '0.5', '0.9', '0.99', '0.999']
+    
+    # Combine them with their respective folder prefixes
+    EXPERIMENTS = [('ablation_loss', v) for v in LOSS_VARIANTS] # + [('ablation_ema', v) for v in EMA_VARIANTS]
+    
     CHECKPOINTS = ['best_2c_net.pth', 'best_3c_net.pth', 'best_4c_net.pth']
     N_FOLDS = 5
     class_names = {0: 'CN', 1: 'sMCI', 2: 'pMCI', 3: 'AD'}
@@ -42,10 +47,10 @@ def main():
         loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
         test_loaders[fold] = loader
 
-    for variant in LOSS_VARIANTS:
+    for prefix, variant in EXPERIMENTS:
         for ckpt_name in CHECKPOINTS:
             for fold in range(1, N_FOLDS + 1):
-                ckpt_path = os.path.join(opt.checkpoints_dir, f"ablation_loss_{variant}_fold{fold}", ckpt_name)
+                ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}_fold{fold}", ckpt_name)
                 
                 if not os.path.exists(ckpt_path):
                     continue

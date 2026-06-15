@@ -35,7 +35,7 @@ def run_fold(opt, current_fold):
     criterionRank = RankLoss(opt.interpolation_lambda)
 
     # dataset preparation
-    return_4c = (opt.ablation_loss == 'exp_triplet_ins2cls')
+    return_4c = (opt.ablation_loss in ['exp_triplet_ins2cls', 'triplet_only'])
     total_cn_dataset = Dataset(mode="total_cn", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold, return_4c=return_4c)
     total_ad_dataset = Dataset(mode="total_ad", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold, return_4c=return_4c)
     total_mci_dataset = Dataset(mode="total_mci", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold, return_4c=return_4c)

@@ -13,10 +13,13 @@ def main():
 
     os.makedirs(opt.out_dir, exist_ok=True)
 
-    LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls']
+    LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only']
+    # EMA_VARIANTS = ['0.1', '0.5', '0.9', '0.99', '0.999']
+    
+    EXPERIMENTS = LOSS_VARIANTS # + EMA_VARIANTS
     CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']
 
-    for variant in LOSS_VARIANTS:
+    for variant in EXPERIMENTS:
         for ckpt in CHECKPOINTS:
             # Find all CSVs for this specific variant and checkpoint across all folds
             search_pattern = os.path.join(opt.csv_dir, f"{variant}_{ckpt}_fold*.csv")

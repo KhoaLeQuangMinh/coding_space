@@ -38,7 +38,7 @@ class BaseOptions():
         parser.add_argument('--kfold', type=int, default=5, help='number of folds for cross validation (1 to disable)')
         parser.add_argument('--fold', type=int, default=1, help='current fold to execute')
         parser.add_argument('--specific_fold', type=int, default=-1, help='run only this specific fold in a kfold setup (distributed execution)')
-        parser.add_argument('--ablation_loss', type=str, default='full', choices=['full', 'ce', 'ins2ins', 'ins2cls', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls'], help='which loss components to use for ablation study')
+        parser.add_argument('--ablation_loss', type=str, default='full', choices=['full', 'ce', 'ins2ins', 'ins2cls', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only'], help='which loss components to use for ablation study')
         self.initialized = True
 
         return parser

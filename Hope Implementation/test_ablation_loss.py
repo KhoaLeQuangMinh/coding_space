@@ -12,7 +12,7 @@ def main():
 
     # losses = ['ce', 'ins2ins', 'ins2cls', 'full']
     # losses = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls']
-    losses = ['exp_triplet_ins2cls']
+    losses = ['triplet_only']
     
     for loss_type in losses:
         for test_target in ['2c', '3c', '4c']:

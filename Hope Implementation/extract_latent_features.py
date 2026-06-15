@@ -26,6 +26,7 @@ def main():
     parser.add_argument('--out_dir', type=str, default='./analysis_output/extracted_features', help='where to save CSVs')
     parser.add_argument('--num_classes', type=int, default=3, help='Number of classes for classification')
     parser.add_argument('--kfold', type=int, default=5, help='Number of folds used during training')
+    parser.add_argument('--target_loss', type=str, default='all', help='Specific loss variant to run. Defaults to all variants.')
     opt = parser.parse_args()
 
     os.makedirs(opt.out_dir, exist_ok=True)
@@ -33,6 +34,8 @@ def main():
     print(f"Using device: {device}")
 
     LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only']
+    if opt.target_loss != 'all':
+        LOSS_VARIANTS = [opt.target_loss]
     # EMA_VARIANTS = ['0.1', '0.5', '0.9', '0.99', '0.999']
     
     # Combine them with their respective folder prefixes

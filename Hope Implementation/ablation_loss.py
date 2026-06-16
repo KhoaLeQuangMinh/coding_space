@@ -32,7 +32,10 @@ def main():
         print(f"RUNNING LOSS VARIANT: {loss_type.upper()}")
         print(f"{'='*50}\n")
         
-        # Build command for train.py
+        # Determine class_num based on the specific experiment requirements
+        class_num = 4 if loss_type in ['full', 'exp_triplet_ins2cls'] else 3
+        
+        name_suffix = "_4class" if class_num == 4 else ""
         cmd = [
             sys.executable, "train.py",
             "--data_dir", args.data_dir,
@@ -40,12 +43,15 @@ def main():
             "--specific_fold", str(args.specific_fold),
             "--m", "0.9", # Lock EMA momentum to 0.9 as requested by the user
             "--ablation_loss", loss_type,
-            "--num_classes", str(args.num_classes),
+            "--class_num", str(class_num),
             "--gpu_ids", "0",
             "--epoch_count", "30",
             "--checkpoints_dir", "./checkpoints",
-            "--name", f"ablation_loss_{loss_type}"
+            "--name", f"ablation_loss_{loss_type}{name_suffix}"
         ]
+        
+        if class_num == 4:
+            cmd.extend(["--dataset", "all", "--group", "all"])
         
         # Execute the training run
         subprocess.run(cmd, check=True)

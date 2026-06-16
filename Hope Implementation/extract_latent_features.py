@@ -57,16 +57,21 @@ def main():
         test_loaders[fold] = loader
 
     for prefix, variant in EXPERIMENTS:
+        class_num = 4 if variant in ['full', 'exp_triplet_ins2cls'] else 3
+        name_suffix = "_4class" if class_num == 4 else ""
+        
         for ckpt_name in CHECKPOINTS:
             for fold in range(1, N_FOLDS + 1):
-                ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}_fold{fold}", ckpt_name)
+                ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}{name_suffix}_fold{fold}", ckpt_name)
                 
                 if not os.path.exists(ckpt_path):
                     continue
-                    
+                
                 print(f"Extracting: {variant} | {ckpt_name} | Fold {fold}")
                 
-                model = resnet18(spatial_size=128, sample_duration=128, num_classes=opt.num_classes, m=0.99)
+                # Setup model dynamically based on the variant's class_num
+                if opt.cls_type == 'resnet3d':
+                    model = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=0.99)
                 state_dict = torch.load(ckpt_path, map_location='cpu')
                 model.load_state_dict(state_dict, strict=False)
                 

@@ -27,18 +27,25 @@ def main():
             print(f"FOLD(S): {args.specific_fold if args.specific_fold != -1 else 'ALL'}")
             print(f"{'='*60}\n")
             
+            # Determine class_num based on the specific experiment requirements
+            class_num = 4 if loss_type in ['full', 'exp_triplet_ins2cls'] else 3
+            
+            name_suffix = "_4class" if class_num == 4 else ""
             cmd = [
                 sys.executable, "test.py",
                 "--data_dir", args.data_dir,
                 "--kfold", str(args.kfold),
                 "--specific_fold", str(args.specific_fold),
-                "--num_classes", str(args.num_classes),
-                "--load_dir", f"./checkpoints/ablation_loss_{loss_type}",
+                "--class_num", str(class_num),
+                "--load_dir", f"./checkpoints/ablation_loss_{loss_type}{name_suffix}",
                 "--test_target", test_target,
-                "--name", f"ablation_loss_{loss_type}",
+                "--name", f"ablation_loss_{loss_type}{name_suffix}",
                 "--checkpoints_dir", "./checkpoints",
                 "--gpu_ids", "0"
             ]
+            
+            if class_num == 4:
+                cmd.extend(["--dataset", "all", "--group", "all"])
             
             subprocess.run(cmd, check=True)
 

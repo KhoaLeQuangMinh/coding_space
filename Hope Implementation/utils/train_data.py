@@ -103,7 +103,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             # Optional QWK Loss
             if ablation_loss == 'qwk_hierarchical_triplet':
                 if qwk_loss_fn is None:
-                    qwk_loss_fn = DifferentiableQWKLoss(num_classes=num_classes).cuda(non_blocking=True)
+                    qwk_loss_fn = DifferentiableQWKLoss(num_classes=num_classes).cuda()
                 loss_QWK = qwk_loss_fn(outputs, labels)
                 loss_CE = loss_QWK  # Replace standard CE with QWK
 

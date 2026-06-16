@@ -17,7 +17,8 @@ os.makedirs(out_dir, exist_ok=True)
 VARIANTS_TO_PLOT = [
     'ce', 'ins2ins', 'ins2cls', 'full', 
     'exclude_ins2ins', 'exclude_ins2cls', 
-    'exp_triplet_ins2cls', 'triplet_only'
+    'exp_triplet_ins2cls', 'triplet_only',
+    'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls'
 ]
 
 # Checkpoints to analyze

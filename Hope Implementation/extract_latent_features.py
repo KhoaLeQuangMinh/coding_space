@@ -70,8 +70,7 @@ def main():
                 print(f"Extracting: {variant} | {ckpt_name} | Fold {fold}")
                 
                 # Setup model dynamically based on the variant's class_num
-                if opt.cls_type == 'resnet3d':
-                    model = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=0.99)
+                model = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=0.99)
                 state_dict = torch.load(ckpt_path, map_location='cpu')
                 model.load_state_dict(state_dict, strict=False)
                 

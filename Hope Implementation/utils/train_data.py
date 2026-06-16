@@ -5,8 +5,9 @@ import time
 import numpy as np
 import torch
 import wandb
-from sklearn.metrics import f1_score, recall_score, roc_auc_score, accuracy_score, precision_score
+from sklearn.metrics import f1_score, recall_score, roc_auc_score, accuracy_score, precision_score, cohen_kappa_score
 from tqdm.auto import tqdm
+from models.qwk_loss import DifferentiableQWKLoss
 
 
 def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
@@ -41,6 +42,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
     best_val_acc_2c = 0.0
     best_val_acc_3c = 0.0
     best_val_acc_4c = 0.0
+    qwk_loss_fn = None
     for e in tqdm(range(1, epochs + 1)):
         model.train()
         train_loss = 0.
@@ -98,6 +100,14 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             # CE loss
             loss_CE = criterion(outputs, labels)
 
+            # Optional QWK Loss
+            if ablation_loss == 'qwk_hierarchical_triplet':
+                if qwk_loss_fn is None:
+                    qwk_loss_fn = DifferentiableQWKLoss(num_classes=num_classes).cuda(non_blocking=True)
+                loss_QWK = qwk_loss_fn(outputs, labels)
+                loss_CE = loss_QWK  # Replace standard CE with QWK
+
+
             # Hybrid-granularity ordinal loss (Ablation Control)
             loss_ins2ins = criterionRank(features, labels)  # instance-to-instance loss
             loss_ins2cls = compactness_loss / features.shape[1]  # instance-to-class loss
@@ -124,7 +134,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                 loss_hyb = (triplet_ins2cls / features.shape[1])
             elif ablation_loss == 'exp_hierarchical_triplet_ins2cls':
                 loss_hyb = loss_ins2ins + (hierarchical_triplet_ins2cls / features.shape[1]) + loss_cls2cls
-            elif ablation_loss == 'hierarchical_triplet_only':
+            elif ablation_loss in ['hierarchical_triplet_only', 'qwk_hierarchical_triplet']:
                 loss_hyb = (hierarchical_triplet_ins2cls / features.shape[1])
             else: # 'full'
                 loss_hyb = loss_ins2ins + loss_ins2cls + loss_cls2cls
@@ -228,8 +238,11 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         
         val_acc_4class = accuracy_score(y_val_true_4class, y_val_pred_4class)
         val_f1_4class = f1_score(y_val_true_4class, y_val_pred_4class, average='weighted')
+        val_qwk_4class = cohen_kappa_score(y_val_true_4class, y_val_pred_4class, weights='quadratic')
+        
         val_acc_3class = accuracy_score(y_val_true_3class, y_val_pred_3class)
         val_f1_3class = f1_score(y_val_true_3class, y_val_pred_3class, average='weighted')
+        val_qwk_3class = cohen_kappa_score(y_val_true_3class, y_val_pred_3class, weights='quadratic')
         
         # In case there are no MCI samples in the validation batch (rare but possible with very small mock datasets)
         if len(y_val_true) > 0:
@@ -264,8 +277,10 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                        "val_loss": val_loss,
                        "val_acc_4class": val_acc_4class,
                        "val_f1_4class": val_f1_4class,
+                       "val_qwk_4class": val_qwk_4class,
                        "val_acc_3class": val_acc_3class,
                        "val_f1_3class": val_f1_3class,
+                       "val_qwk_3class": val_qwk_3class,
                        "val_acc": val_acc, "val_f1": val_f1_score,
                        "val_sen": val_recall, "val_spe": val_spe,
                        "val_precision": val_precision, "val_auc": val_auc
@@ -274,6 +289,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                   'Train Loss:{:.3f}...'.format(train_loss),
                   'Train Accuracy:{:.3f}...'.format(train_acc),
                   'Val Acc 4-class:{:.3f}...'.format(val_acc_4class),
+                  'Val QWK 4-class:{:.3f}...'.format(val_qwk_4class),
                   'Val Acc 3-class:{:.3f}...'.format(val_acc_3class),
                   'Val Acc 2-class (MCI):{:.3f}...'.format(val_acc)
                   )
@@ -286,8 +302,10 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             'val_loss': val_loss,
             'val_acc_4class': val_acc_4class,
             'val_f1_4class': val_f1_4class,
+            'val_qwk_4class': val_qwk_4class,
             'val_acc_3class': val_acc_3class,
             'val_f1_3class': val_f1_3class,
+            'val_qwk_3class': val_qwk_3class,
             'val_acc': val_acc,
             'val_f1': val_f1_score,
             'val_sen': val_recall,

@@ -22,7 +22,7 @@ def run_test(opt, current_fold):
     criterion = nn.CrossEntropyLoss()
 
     # dataset preparation
-    test_dataset = Dataset(mode="test", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold)
+    test_dataset = Dataset(mode="test", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold, return_4c=(opt.class_num == 4))
 
     # test loader
     num_workers_test = max(0, int(opt.workers / 2))
@@ -78,11 +78,13 @@ if __name__ == '__main__':
             summary_data.append({
                 'Loss': m['val_loss'],
                 'Acc 4-class': m['val_acc_4class'],
+                'QWK 4-class': m['val_qwk_4class'],
                 'F1 4-class': m['val_f1_4class'],
                 'Prec 4-class': m['val_prec_4class'],
                 'Recall 4-class': m['val_rec_4class'],
                 'AUC 4-class': m['val_auc_4class'],
                 'Acc 3-class': m['val_acc_3class'],
+                'QWK 3-class': m['val_qwk_3class'],
                 'F1 3-class': m['val_f1_3class'],
                 'Prec 3-class': m['val_prec_3class'],
                 'Recall 3-class': m['val_rec_3class'],
@@ -105,14 +107,26 @@ if __name__ == '__main__':
         print(df.to_markdown())
         
         try:
-            if opt.specific_fold != -1:
-                expr_dir = os.path.join(opt.checkpoints_dir, f"{opt.name}_fold{opt.specific_fold}")
-            else:
-                expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
-            os.makedirs(expr_dir, exist_ok=True)
-            csv_path = os.path.join(expr_dir, f"test_metrics_best_{opt.test_target}.csv")
-            df.to_csv(csv_path)
-            print(f"\nSaved test metrics to {csv_path}")
+            # Save the combined summary if running all folds
+            if opt.specific_fold == -1 and len(all_metrics) > 1:
+                root_expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
+                os.makedirs(root_expr_dir, exist_ok=True)
+                root_csv_path = os.path.join(root_expr_dir, f"test_metrics_best_{opt.test_target}.csv")
+                df.to_csv(root_csv_path)
+                print(f"\nSaved aggregated test metrics to {root_csv_path}")
+
+            # ALWAYS save the individual fold metrics to their respective _foldX directories
+            for i, m in enumerate(all_metrics):
+                fold_num = opt.specific_fold if opt.specific_fold != -1 else (i + 1)
+                fold_expr_dir = os.path.join(opt.checkpoints_dir, f"{opt.name}_fold{fold_num}")
+                os.makedirs(fold_expr_dir, exist_ok=True)
+                fold_csv_path = os.path.join(fold_expr_dir, f"test_metrics_best_{opt.test_target}.csv")
+                
+                # Create a single-row DataFrame for this fold
+                single_fold_df = pd.DataFrame([summary_data[i]], index=[f"Fold {fold_num}"])
+                single_fold_df.to_csv(fold_csv_path)
+            
+            print(f"Saved individual fold test metrics correctly.")
         except Exception as e:
             print(f"Could not save test metrics csv: {e}")
         # Confusion Matrix for 4-class across all folds

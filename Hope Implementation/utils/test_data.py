@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 import torch
-from sklearn.metrics import f1_score, recall_score, roc_auc_score, accuracy_score, precision_score
+from sklearn.metrics import f1_score, recall_score, roc_auc_score, accuracy_score, precision_score, cohen_kappa_score
 from tqdm.auto import tqdm
 
 
@@ -112,6 +112,8 @@ def test_data(model, test_dataloaders, criterion):
             val_auc_4class = roc_auc_score(y_val_true_4class, np.array(val_prob_4class), multi_class='ovr', average='weighted')
         except ValueError:
             val_auc_4class = 0.0
+            
+        val_qwk_4class = cohen_kappa_score(y_val_true_4class, y_val_pred_4class, weights='quadratic')
         
         val_acc_3class = accuracy_score(y_val_true_3class, y_val_pred_3class)
         val_f1_3class = f1_score(y_val_true_3class, y_val_pred_3class, average='weighted')
@@ -121,9 +123,11 @@ def test_data(model, test_dataloaders, criterion):
             val_auc_3class = roc_auc_score(y_val_true_3class, np.array(val_prob_3class), multi_class='ovr', average='weighted')
         except ValueError:
             val_auc_3class = 0.0
+            
+        val_qwk_3class = cohen_kappa_score(y_val_true_3class, y_val_pred_3class, weights='quadratic')
     else:
-        val_acc_4class = val_f1_4class = val_prec_4class = val_rec_4class = val_auc_4class = 0.0
-        val_acc_3class = val_f1_3class = val_prec_3class = val_rec_3class = val_auc_3class = 0.0
+        val_acc_4class = val_f1_4class = val_prec_4class = val_rec_4class = val_auc_4class = val_qwk_4class = 0.0
+        val_acc_3class = val_f1_3class = val_prec_3class = val_rec_3class = val_auc_3class = val_qwk_3class = 0.0
 
     # In case there are no MCI samples
     if len(y_val_true) > 0:
@@ -145,8 +149,10 @@ def test_data(model, test_dataloaders, criterion):
     print(
         'Test Loss:{:.3f}...'.format(val_loss),
         'Test Acc 4-class:{:.3f}...'.format(val_acc_4class),
+        'Test QWK 4-class:{:.3f}...'.format(val_qwk_4class),
         'Test F1 4-class:{:.3f}...'.format(val_f1_4class),
         'Test Acc 3-class:{:.3f}...'.format(val_acc_3class),
+        'Test QWK 3-class:{:.3f}...'.format(val_qwk_3class),
         'Test F1 3-class:{:.3f}...'.format(val_f1_3class),
         'Test Accuracy:{:.3f}...'.format(val_acc),
         'Test F1 Score:{:.3f}'.format(val_f1_score),
@@ -163,11 +169,13 @@ def test_data(model, test_dataloaders, criterion):
     metrics = {
         'val_loss': val_loss,
         'val_acc_4class': val_acc_4class,
+        'val_qwk_4class': val_qwk_4class,
         'val_f1_4class': val_f1_4class,
         'val_prec_4class': val_prec_4class,
         'val_rec_4class': val_rec_4class,
         'val_auc_4class': val_auc_4class,
         'val_acc_3class': val_acc_3class,
+        'val_qwk_3class': val_qwk_3class,
         'val_f1_3class': val_f1_3class,
         'val_prec_3class': val_prec_3class,
         'val_rec_3class': val_rec_3class,

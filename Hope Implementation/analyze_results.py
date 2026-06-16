@@ -74,6 +74,7 @@ MCI_COLS = {
 # 3-class metrics
 CLS3_COLS = {
     'Acc 3-class':    'ACC',
+    'QWK 3-class':    'QWK',
     'AUC 3-class':    'AUC',
     'F1 3-class':     'F1-score',
     'Prec 3-class':   'Precision',
@@ -82,6 +83,7 @@ CLS3_COLS = {
 # 4-class metrics
 CLS4_COLS = {
     'Acc 4-class':    'ACC',
+    'QWK 4-class':    'QWK',
     'AUC 4-class':    'AUC',
     'F1 4-class':     'F1-score',
     'Prec 4-class':   'Precision',
@@ -108,20 +110,7 @@ def load_row(base_dir, folder_prefix, test_target, fold):
 
 def aggregate(base_dir, folder_prefix, test_target, n_folds=5):
     """Return {'mean': Series, 'std': Series, 'n': int, 'per_fold': DataFrame}"""
-    # Check if aggregated root CSV exists (new script format)
-    root_csv_path = os.path.join(base_dir, folder_prefix, f"test_metrics_best_{test_target}.csv")
-    if os.path.exists(root_csv_path):
-        df = pd.read_csv(root_csv_path, index_col=0)
-        if 'Mean' in df.index and 'Std' in df.index:
-            per_fold = df.drop(['Mean', 'Std'], errors='ignore')
-            return {
-                'mean': df.loc['Mean'],
-                'std': df.loc['Std'],
-                'n': n_folds,
-                'per_fold': per_fold.reset_index(drop=True),
-            }
-
-    # Fallback to old format (reading from fold folders)
+    # Force fallback to reading from fold folders to ensure fresh aggregation
     rows = []
     for fold in range(1, n_folds + 1):
         r = load_row(base_dir, folder_prefix, test_target, fold)
@@ -355,7 +344,7 @@ def main():
 
     col_w = 20
     v_hdr = f"  {'Variant':<20}  {'Training Labels':<22}" + "".join(
-        f"  {dc:>{col_w}}" for dc in ['ACC', 'AUC', 'F1-score', 'Precision', 'Recall'])
+        f"  {dc:>{col_w}}" for dc in ['ACC', 'QWK', 'AUC', 'F1-score', 'Precision', 'Recall'])
     print(v_hdr)
     print("  " + div(len(v_hdr) - 2))
 
@@ -369,9 +358,9 @@ def main():
         return row
 
     # V1: 3-class — exclusively uses 3-class metrics
-    v1_map = {'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score', 'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}
+    v1_map = {'Acc 3-class': 'ACC', 'QWK 3-class': 'QWK', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score', 'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}
     # V2: 4-class — exclusively uses 4-class metrics
-    v2_map = {'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score', 'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}
+    v2_map = {'Acc 4-class': 'ACC', 'QWK 4-class': 'QWK', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score', 'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}
 
     print(ext_row("V1", "NC / MCI / AD",        a3, v1_map))
     print(ext_row("V2", "NC / sMCI / pMCI / AD", a4, v2_map))
@@ -396,8 +385,8 @@ def main():
     ]
     cross_metrics = {
         '2c': [('MCI Acc', 'ACC'), ('MCI F1', 'F1'), ('MCI AUC', 'AUC')],
-        '3c': [('Acc 3-class', 'ACC'), ('F1 3-class', 'F1')],
-        '4c': [('Acc 4-class', 'ACC'), ('F1 4-class', 'F1')],
+        '3c': [('Acc 3-class', 'ACC'), ('QWK 3-class', 'QWK'), ('F1 3-class', 'F1')],
+        '4c': [('Acc 4-class', 'ACC'), ('QWK 4-class', 'QWK'), ('F1 4-class', 'F1')],
     }
     task_names = {
         '2c': '2-Class (sMCI vs pMCI)',
@@ -453,6 +442,7 @@ def main():
 
     sub_hdrs = ['2-Class (sMCI vs pMCI)', '3-Class (NC/MCI/AD)', '4-Class (NC/sMCI/pMCI/AD)']
     sub_accs = [('MCI Acc', '2c'), ('Acc 3-class', '3c'), ('Acc 4-class', '4c')]
+    sub_qwks = [('MCI Acc', '2c'), ('QWK 3-class', '3c'), ('QWK 4-class', '4c')] # Use Acc as placeholder for 2c QWK
     sub_f1s  = [('MCI F1',  '2c'), ('F1 3-class',  '3c'), ('F1 4-class',  '4c')]
     sub_aucs = [('MCI AUC', '2c'), ('MCI AUC',     '3c'), ('MCI AUC',     '4c')]
 
@@ -464,15 +454,15 @@ def main():
 
     sub_col_hdr = f"  {'':30}"
     for _ in sub_hdrs:
-        sub_col_hdr += f"  {'ACC':>{col_w2}}  {'F1':>{col_w2}}  {'AUC':>{col_w2}}"
+        sub_col_hdr += f"  {'ACC':>{col_w2}}  {'QWK':>{col_w2}}  {'F1':>{col_w2}}  {'AUC':>{col_w2}}"
     print(sub_col_hdr)
     print("  " + div(len(sub_col_hdr) - 2))
 
     for v in LOSS_VARIANTS:
         row = f"  {LOSS_LABELS[v]:<30}"
-        for (acc_col, t), (f1_col, _), (auc_col, __) in zip(sub_accs, sub_f1s, sub_aucs):
+        for (acc_col, t), (qwk_col, _), (f1_col, __), (auc_col, ___) in zip(sub_accs, sub_qwks, sub_f1s, sub_aucs):
             agg = loss_agg[v].get(t)
-            row += f"  {get_ms(agg, acc_col):>{col_w2}}  {get_ms(agg, f1_col):>{col_w2}}  {get_ms(agg, auc_col):>{col_w2}}"
+            row += f"  {get_ms(agg, acc_col):>{col_w2}}  {get_ms(agg, qwk_col) if t != '2c' else 'N/A':>{col_w2}}  {get_ms(agg, f1_col):>{col_w2}}  {get_ms(agg, auc_col):>{col_w2}}"
         print(row)
     print()
 
@@ -484,9 +474,9 @@ def main():
 
     for v in EMA_VARIANTS:
         row = f"  {EMA_LABELS[v]:<30}"
-        for (acc_col, t), (f1_col, _), (auc_col, __) in zip(sub_accs, sub_f1s, sub_aucs):
+        for (acc_col, t), (qwk_col, _), (f1_col, __), (auc_col, ___) in zip(sub_accs, sub_qwks, sub_f1s, sub_aucs):
             agg = ema_agg[v].get(t)
-            row += f"  {get_ms(agg, acc_col):>{col_w2}}  {get_ms(agg, f1_col):>{col_w2}}  {get_ms(agg, auc_col):>{col_w2}}"
+            row += f"  {get_ms(agg, acc_col):>{col_w2}}  {get_ms(agg, qwk_col) if t != '2c' else 'N/A':>{col_w2}}  {get_ms(agg, f1_col):>{col_w2}}  {get_ms(agg, auc_col):>{col_w2}}"
         print(row)
     print()
 
@@ -500,10 +490,10 @@ def main():
     all_target_defs = [
         ('2-Class (sMCI vs pMCI)', '2c', MCI_COLS),
         ('3-Class (NC / MCI / AD)', '3c', {
-            'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
+            'Acc 3-class': 'ACC', 'QWK 3-class': 'QWK', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
             'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}),
         ('4-Class (NC/sMCI/pMCI/AD)', '4c', {
-            'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
+            'Acc 4-class': 'ACC', 'QWK 4-class': 'QWK', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
             'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}),
     ]
 
@@ -533,9 +523,9 @@ def main():
         EMA_VARIANTS, EMA_LABELS, '2c', MCI_COLS, ema_agg)
 
     # Table V — V1 (3-class) and V2 (4-class) for full HOPE
-    v1_col_map = {'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
+    v1_col_map = {'Acc 3-class': 'ACC', 'QWK 3-class': 'QWK', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
                   'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}
-    v2_col_map = {'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
+    v2_col_map = {'Acc 4-class': 'ACC', 'QWK 4-class': 'QWK', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
                   'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}
     tableV_rows = []
     for variant_label, t, cmap in [('V1 (NC/MCI/AD)', '3c', v1_col_map),
@@ -557,38 +547,38 @@ def main():
     export_summary_csv(
         os.path.join(export_dir, 'extended_loss_ablation_3class.csv'),
         LOSS_VARIANTS, LOSS_LABELS, '3c',
-        {'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
+        {'Acc 3-class': 'ACC', 'QWK 3-class': 'QWK', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
          'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}, loss_agg)
 
     # Extended Table A — Loss ablation, 4-class
     export_summary_csv(
         os.path.join(export_dir, 'extended_loss_ablation_4class.csv'),
         LOSS_VARIANTS, LOSS_LABELS, '4c',
-        {'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
+        {'Acc 4-class': 'ACC', 'QWK 4-class': 'QWK', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
          'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}, loss_agg)
 
     # Extended Table B — EMA ablation, 3-class
     export_summary_csv(
         os.path.join(export_dir, 'extended_ema_ablation_3class.csv'),
         EMA_VARIANTS, EMA_LABELS, '3c',
-        {'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
+        {'Acc 3-class': 'ACC', 'QWK 3-class': 'QWK', 'AUC 3-class': 'AUC', 'F1 3-class': 'F1-score',
          'Prec 3-class': 'Precision', 'Recall 3-class': 'Recall'}, ema_agg)
 
     # Extended Table B — EMA ablation, 4-class
     export_summary_csv(
         os.path.join(export_dir, 'extended_ema_ablation_4class.csv'),
         EMA_VARIANTS, EMA_LABELS, '4c',
-        {'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
+        {'Acc 4-class': 'ACC', 'QWK 4-class': 'QWK', 'AUC 4-class': 'AUC', 'F1 4-class': 'F1-score',
          'Prec 4-class': 'Precision', 'Recall 4-class': 'Recall'}, ema_agg)
 
     # Extended Table C — Best model (HOPE full) complete breakdown, all 3 tasks
     tableC_rows = []
     for task_label, t, cmap in [
         ('2-Class (sMCI vs pMCI)',   '2c', MCI_COLS),
-        ('3-Class (NC/MCI/AD)',      '3c', {'Acc 3-class': 'ACC', 'AUC 3-class': 'AUC',
+        ('3-Class (NC/MCI/AD)',      '3c', {'Acc 3-class': 'ACC', 'QWK 3-class': 'QWK', 'AUC 3-class': 'AUC',
                                             'F1 3-class': 'F1-score', 'Prec 3-class': 'Precision',
                                             'Recall 3-class': 'Recall'}),
-        ('4-Class (NC/sMCI/pMCI/AD)','4c', {'Acc 4-class': 'ACC', 'AUC 4-class': 'AUC',
+        ('4-Class (NC/sMCI/pMCI/AD)','4c', {'Acc 4-class': 'ACC', 'QWK 4-class': 'QWK', 'AUC 4-class': 'AUC',
                                             'F1 4-class': 'F1-score', 'Prec 4-class': 'Precision',
                                             'Recall 4-class': 'Recall'}),
     ]:

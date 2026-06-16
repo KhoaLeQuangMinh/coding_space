@@ -50,7 +50,8 @@ class DifferentiableQWKLoss(nn.Module):
         
         # 5. Build expected random confusion matrix (E)
         # E[i, j] = (actual_i * pred_j) / batch_size
-        E = torch.outer(actual_hist, pred_hist) / (targets.size(0) + self.epsilon)
+        batch_size = logits.size(0)
+        E = torch.outer(actual_hist, pred_hist) / batch_size
         
         # Normalize matrices to sum to 1
         O_norm = O / (O.sum() + self.epsilon)
@@ -66,9 +67,11 @@ class DifferentiableQWKLoss(nn.Module):
         # or -Kappa, or log(numerator / denominator).
         # Returning log(numerator / denominator) is often numerically more stable for neural networks.
         
-        loss = torch.log((numerator + self.epsilon) / (denominator + self.epsilon))
+        # loss = torch.log((numerator + self.epsilon) / (denominator + self.epsilon))
         
-        # Alternatively, returning the raw ratio is also standard.
-        # loss = numerator / (denominator + self.epsilon)
+        # Returning the raw ratio is the standard formulation.
+        # Random guessing -> numerator == denominator -> loss ≈ 1.0
+        # Perfect prediction -> numerator == 0 -> loss ≈ 0.0
+        loss = numerator / (denominator + self.epsilon)
         
         return loss

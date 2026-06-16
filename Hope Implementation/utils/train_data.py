@@ -101,7 +101,12 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             # Hybrid-granularity ordinal loss (Ablation Control)
             loss_ins2ins = criterionRank(features, labels)  # instance-to-instance loss
             loss_ins2cls = compactness_loss / features.shape[1]  # instance-to-class loss
-            loss_cls2cls = features.shape[1] / separation_loss + criterionRank(mus, torch.arange(num_classes).float().cuda())
+            
+            present_classes = torch.unique(labels).float().cuda()
+            if len(present_classes) > 1:
+                loss_cls2cls = features.shape[1] / separation_loss + criterionRank(mus, present_classes)
+            else:
+                loss_cls2cls = torch.tensor(0.0, device=loss_CE.device)
             
             if ablation_loss == 'ce':
                 loss_hyb = torch.tensor(0.0, device=loss_CE.device)
@@ -175,15 +180,19 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                 
                 for b, s, t in zip(x_predicted, val_predicted, labels):
                     t_val = t.item()
-                    if b == 0:
-                        pred_4c = 0
-                    elif b == 2:
-                        pred_4c = 3
-                    else:
-                        pred_4c = 1 if s == 0 else 2
-                    
-                    pred_3c = b.item()
-                    true_3c = 0 if t_val == 0 else (1 if t_val in [1, 2] else 2)
+                    if num_classes == 3:
+                        if b == 0:
+                            pred_4c = 0
+                        elif b == 2:
+                            pred_4c = 3
+                        else:
+                            pred_4c = 1 if s == 0 else 2
+                        pred_3c = b.item()
+                        true_3c = 0 if t_val == 0 else (1 if t_val in [1, 2] else 2)
+                    else: # num_classes == 4
+                        pred_4c = b.item()
+                        pred_3c = 0 if pred_4c == 0 else (1 if pred_4c in [1, 2] else 2)
+                        true_3c = 0 if t_val == 0 else (1 if t_val in [1, 2] else 2)
                     
                     y_val_pred_4class.append(pred_4c)
                     y_val_true_4class.append(t_val)

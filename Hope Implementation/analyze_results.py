@@ -222,8 +222,16 @@ def print_per_fold_table(title, variants, row_labels, folder_prefix, test_target
     for v in variants:
         label = row_labels[v]
         vals  = []
+        
+        # Determine suffix if it's a loss experiment
+        name_suffix = ""
+        if folder_prefix == 'loss':
+            class_num = 4 if v in ['full', 'exp_triplet_ins2cls'] else 3
+            if class_num == 4:
+                name_suffix = "_4class"
+                
         for fold in range(1, 6):
-            r = load_row(base_dir, f"ablation_{folder_prefix}_{v}", test_target, fold)
+            r = load_row(base_dir, f"ablation_{folder_prefix}_{v}{name_suffix}", test_target, fold)
             vals.append(pct(r[primary_col]) if r and primary_col in r else float('nan'))
 
         arr = np.array(vals)
@@ -282,10 +290,15 @@ def main():
     ema_agg  = {v: {} for v in EMA_VARIANTS}
 
     for v in LOSS_VARIANTS:
+        loss_agg[v] = {}
+        class_num = 4 if v in ['full', 'exp_triplet_ins2cls'] else 3
+        name_suffix = "_4class" if class_num == 4 else ""
         for t in ['2c', '3c', '4c']:
-            loss_agg[v][t] = aggregate(base_dir, f"ablation_loss_{v}", t)
+            loss_agg[v][t] = aggregate(base_dir, f"ablation_loss_{v}{name_suffix}", t)
 
+    ema_agg = {}
     for v in EMA_VARIANTS:
+        ema_agg[v] = {}
         for t in ['2c', '3c', '4c']:
             ema_agg[v][t] = aggregate(base_dir, f"ablation_ema_{v}", t)
 

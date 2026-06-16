@@ -13,7 +13,7 @@ def main():
 
     os.makedirs(opt.out_dir, exist_ok=True)
 
-    LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only', 'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls']
+    LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only', 'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls', 'full_4class']
     # EMA_VARIANTS = ['0.1', '0.5', '0.9', '0.99', '0.999']
     
     EXPERIMENTS = LOSS_VARIANTS # + EMA_VARIANTS

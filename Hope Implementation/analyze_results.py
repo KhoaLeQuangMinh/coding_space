@@ -32,7 +32,7 @@ import numpy as np
 # Configuration — matches your ablation scripts exactly
 # ──────────────────────────────────────────────────────────────────────
 
-LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only', 'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls', 'full_4class', 'exp_triplet_ins2cls_4class']
+LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only', 'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls', 'full_4class']
 EMA_VARIANTS  = ['None', '0.5', '0.8', '0.9', '0.99', '0.999']
 N_FOLDS       = 5
 
@@ -49,7 +49,6 @@ LOSS_LABELS = {
     'hierarchical_triplet_only': 'CE + Hierarchical Triplet Only',
     'exp_hierarchical_triplet_ins2cls': 'Hierarchical Triplet Ins2Cls',
     'full_4class': 'HOPE 4-Class (No EMA)',
-    'exp_triplet_ins2cls_4class': 'Triplet Ins2Cls 4-Class (No EMA)',
 }
 
 # Paper-matching row labels for Table IV
@@ -284,10 +283,8 @@ def main():
 
     for v in LOSS_VARIANTS:
         loss_agg[v] = {}
-        class_num = 4 if v in ['full', 'exp_triplet_ins2cls'] else 3
-        name_suffix = "_4class" if class_num == 4 else ""
         for t in ['2c', '3c', '4c']:
-            loss_agg[v][t] = aggregate(base_dir, f"ablation_loss_{v}{name_suffix}", t)
+            loss_agg[v][t] = aggregate(base_dir, f"ablation_loss_{v}", t)
 
     ema_agg = {}
     for v in EMA_VARIANTS:

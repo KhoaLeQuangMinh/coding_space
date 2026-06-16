@@ -12,7 +12,8 @@ VARIANTS = [
     'ce', 'ins2ins', 'ins2cls', 'full', 
     'exclude_ins2ins', 'exclude_ins2cls', 
     'exp_triplet_ins2cls', 'triplet_only',
-    'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls'
+    'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls',
+    'full_4class'
 ]
 
 CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']

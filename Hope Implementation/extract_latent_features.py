@@ -57,64 +57,64 @@ def main():
         test_loaders[fold] = loader
 
     for prefix, variant in EXPERIMENTS:
-        class_num = 4 if variant in ['full', 'exp_triplet_ins2cls'] else 3
-        name_suffix = "_4class" if class_num == 4 else ""
-        
-        for ckpt_name in CHECKPOINTS:
-            for fold in range(1, N_FOLDS + 1):
-                ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}{name_suffix}_fold{fold}", ckpt_name)
-                
-                if not os.path.exists(ckpt_path):
-                    continue
-                
-                print(f"Extracting: {variant} | {ckpt_name} | Fold {fold}")
-                
-                # Setup model dynamically based on the variant's class_num
-                model = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=0.99)
-                state_dict = torch.load(ckpt_path, map_location='cpu')
-                model.load_state_dict(state_dict, strict=False)
-                
-                if 'prototypes' in state_dict:
-                    model.prototypes = state_dict['prototypes'].to(device)
-                else:
-                    model.prototypes = model.prototypes.to(device)
+        for class_num in [3, 4]:
+            name_suffix = "_4class" if class_num == 4 else ""
+            
+            for ckpt_name in CHECKPOINTS:
+                for fold in range(1, N_FOLDS + 1):
+                    ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}{name_suffix}_fold{fold}", ckpt_name)
                     
-                model.to(device)
-                model.eval()
-                
-                proto_cn = model.prototypes[0]
-                proto_ad = model.prototypes[2]
-                
-                loader = test_loaders[fold]
-                fold_severities = []
-                fold_labels = []
-                fold_features = []
-                
-                with torch.no_grad():
-                    for batch in loader:
-                        imgs = batch[0].to(device)
-                        labels_4c = batch[2].numpy()
-                        x_ori, _, _ = model(imgs)
-                        severity = compute_1d_severity(x_ori, proto_cn, proto_ad)
-                        fold_severities.extend(severity.tolist())
-                        fold_labels.extend(labels_4c.tolist())
-                        fold_features.extend(x_ori.cpu().detach().numpy().tolist())
-                
-                # Save this specific fold's data to a tiny CSV
-                df_data = {
-                    'Severity': fold_severities,
-                    'True Label': [class_names[lbl] for lbl in fold_labels]
-                }
-                
-                # Add the 512 raw features as individual columns
-                fold_features_np = np.array(fold_features)
-                for i in range(fold_features_np.shape[1]):
-                    df_data[f'feature_{i}'] = fold_features_np[:, i]
+                    if not os.path.exists(ckpt_path):
+                        continue
                     
-                df = pd.DataFrame(df_data)
-                csv_name = f"{variant}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
-                df.to_csv(os.path.join(opt.out_dir, csv_name), index=False)
-                print(f"  -> Saved {csv_name}")
+                    print(f"Extracting: {variant}{name_suffix} | {ckpt_name} | Fold {fold}")
+                    
+                    # Setup model dynamically based on the variant's class_num
+                    model = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=0.99)
+                    state_dict = torch.load(ckpt_path, map_location='cpu')
+                    model.load_state_dict(state_dict, strict=False)
+                    
+                    if 'prototypes' in state_dict:
+                        model.prototypes = state_dict['prototypes'].to(device)
+                    else:
+                        model.prototypes = model.prototypes.to(device)
+                        
+                    model.to(device)
+                    model.eval()
+                    
+                    proto_cn = model.prototypes[0]
+                    proto_ad = model.prototypes[2]
+                    
+                    loader = test_loaders[fold]
+                    fold_severities = []
+                    fold_labels = []
+                    fold_features = []
+                    
+                    with torch.no_grad():
+                        for batch in loader:
+                            imgs = batch[0].to(device)
+                            labels_4c = batch[2].numpy()
+                            x_ori, _, _ = model(imgs)
+                            severity = compute_1d_severity(x_ori, proto_cn, proto_ad)
+                            fold_severities.extend(severity.tolist())
+                            fold_labels.extend(labels_4c.tolist())
+                            fold_features.extend(x_ori.cpu().detach().numpy().tolist())
+                    
+                    # Save this specific fold's data to a tiny CSV
+                    df_data = {
+                        'Severity': fold_severities,
+                        'True Label': [class_names[lbl] for lbl in fold_labels]
+                    }
+                    
+                    # Add the 512 raw features as individual columns
+                    fold_features_np = np.array(fold_features)
+                    for i in range(fold_features_np.shape[1]):
+                        df_data[f'feature_{i}'] = fold_features_np[:, i]
+                        
+                    df = pd.DataFrame(df_data)
+                    csv_name = f"{variant}{name_suffix}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
+                    df.to_csv(os.path.join(opt.out_dir, csv_name), index=False)
+                    print(f"  -> Saved {csv_name}")
 
 if __name__ == '__main__':
     main()

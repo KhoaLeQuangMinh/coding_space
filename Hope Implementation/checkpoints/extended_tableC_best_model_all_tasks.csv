@@ -1,0 +1,4 @@
+Task,Model,N_Folds,ACC,AUC,F1-score,Precision,Recall
+2-Class (sMCI vs pMCI),best_2c_net,5,68.7 ± 2.6,78.1 ± 2.3,67.6 ± 4.0,75.6 ± 4.3,68.7 ± 2.6
+3-Class (NC/MCI/AD),best_3c_net,5,50.2 ± 6.7,69.9 ± 5.3,49.2 ± 8.6,52.7 ± 9.4,50.2 ± 6.7
+4-Class (NC/sMCI/pMCI/AD),best_4c_net,5,45.3 ± 9.7,71.7 ± 5.4,43.3 ± 10.3,46.9 ± 9.4,45.3 ± 9.7

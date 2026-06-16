@@ -1,0 +1,4 @@
+Checkpoint,Optimised_For,2-Class (sMCI vs pMCI)_ACC,2-Class (sMCI vs pMCI)_F1,2-Class (sMCI vs pMCI)_AUC,3-Class (NC/MCI/AD)_ACC,3-Class (NC/MCI/AD)_F1,4-Class (NC/sMCI/pMCI/AD)_ACC,4-Class (NC/sMCI/pMCI/AD)_F1
+best_2c_net,2-Class (sMCI vs pMCI),68.7 ± 2.6 [diag],67.6 ± 4.0 [diag],78.1 ± 2.3 [diag],53.7 ± 2.5,53.0 ± 3.1,44.7 ± 2.7,44.9 ± 3.2
+best_3c_net,3-Class (NC/MCI/AD),71.1 ± 4.1,69.8 ± 5.8,80.0 ± 1.9,50.2 ± 6.7 [diag],49.2 ± 8.6 [diag],42.0 ± 6.8,41.1 ± 8.1
+best_4c_net,4-Class (NC/sMCI/pMCI/AD),71.0 ± 4.4,69.2 ± 5.7,80.1 ± 2.1,52.2 ± 9.2,50.3 ± 10.6,45.3 ± 9.7 [diag],43.3 ± 10.3 [diag]

@@ -15,11 +15,18 @@ os.makedirs(out_dir, exist_ok=True)
 
 # Define the models we want to plot
 VARIANTS_TO_PLOT = [
-    'ce', 'ins2ins', 'ins2cls', 'full', 
-    'exclude_ins2ins', 'exclude_ins2cls', 
-    'exp_triplet_ins2cls', 'triplet_only',
-    'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls',
-    'full_4class'
+    'ce', 
+    'ins2ins', 
+    'ins2cls', 
+    'full',
+    'exclude_ins2ins',
+    'exclude_ins2cls',
+    'exp_triplet_ins2cls',
+    'triplet_only',
+    'hierarchical_triplet_only',
+    'exp_hierarchical_triplet_ins2cls',
+    'full_4class',
+    'exp_triplet_ins2cls_4class'
 ]
 
 # Checkpoints to analyze

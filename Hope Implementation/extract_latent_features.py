@@ -24,97 +24,83 @@ def main():
     parser.add_argument('--data_dir', type=str, default='/kaggle/input/datasets/kisokoghan/paired-npz/paired_npz', help='Path to NPZ data')
     parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='path to checkpoints')
     parser.add_argument('--out_dir', type=str, default='./analysis_output/extracted_features', help='where to save CSVs')
-    parser.add_argument('--num_classes', type=int, default=3, help='Number of classes for classification')
     parser.add_argument('--kfold', type=int, default=5, help='Number of folds used during training')
-    parser.add_argument('--target_loss', type=str, default='all', help='Specific loss variant to run. Defaults to all variants.')
+    parser.add_argument('--specific_fold', type=int, default=-1, help='Extract features for only this specific fold (1-based)')
+    parser.add_argument('--num_classes', type=int, required=True, help='Number of classes for classification (e.g., 3 or 4)')
+    parser.add_argument('--target_loss', type=str, required=True, help='Specific loss variant to run (e.g., ce, full, exp_triplet_ins2cls)')
     opt = parser.parse_args()
 
     os.makedirs(opt.out_dir, exist_ok=True)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    # The same variants used in training
-    # loss_variants = ['ce', 'ins2ins', 'ins2cls', 'full']
-    # loss_variants = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls']
-    LOSS_VARIANTS = ['full', 'exp_triplet_ins2cls', 'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls']
-    
-    if opt.target_loss != 'all':
-        LOSS_VARIANTS = [opt.target_loss]
-    # EMA_VARIANTS = ['0.1', '0.5', '0.9', '0.99', '0.999']
-    
-    # Combine them with their respective folder prefixes
-    EXPERIMENTS = [('ablation_loss', v) for v in LOSS_VARIANTS] # + [('ablation_ema', v) for v in EMA_VARIANTS]
+    variant = opt.target_loss
+    class_num = opt.num_classes
+    name_suffix = "_4class" if class_num == 4 else ""
+    prefix = "ablation_loss"
     
     CHECKPOINTS = ['best_2c_net.pth', 'best_3c_net.pth', 'best_4c_net.pth']
-    N_FOLDS = 5
+    N_FOLDS = opt.kfold
     class_names = {0: 'CN', 1: 'sMCI', 2: 'pMCI', 3: 'AD'}
 
-    print("Pre-loading Test datasets...")
-    test_loaders = {}
-    for fold in range(1, N_FOLDS + 1):
+    folds_to_run = range(1, N_FOLDS + 1) if opt.specific_fold == -1 else [opt.specific_fold]
+    
+    for fold in folds_to_run:
+        print(f"\nProcessing Fold {fold}...")
         dataset = Dataset(mode="test", data_dir=opt.data_dir, seed=42, kfold=N_FOLDS, current_fold=fold, return_4c=True)
         loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
-        test_loaders[fold] = loader
-
-    for prefix, variant in EXPERIMENTS:
-        for class_num in [3, 4]:
-            name_suffix = "_4class" if class_num == 4 else ""
+        
+        for ckpt_name in CHECKPOINTS:
+            ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}{name_suffix}_fold{fold}", ckpt_name)
             
-            for ckpt_name in CHECKPOINTS:
-                for fold in range(1, N_FOLDS + 1):
-                    ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}{name_suffix}_fold{fold}", ckpt_name)
-                    
-                    if not os.path.exists(ckpt_path):
-                        continue
-                    
-                    print(f"Extracting: {variant}{name_suffix} | {ckpt_name} | Fold {fold}")
-                    
-                    # Setup model dynamically based on the variant's class_num
-                    model = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=0.99)
-                    state_dict = torch.load(ckpt_path, map_location='cpu')
-                    model.load_state_dict(state_dict, strict=False)
-                    
-                    if 'prototypes' in state_dict:
-                        model.prototypes = state_dict['prototypes'].to(device)
-                    else:
-                        model.prototypes = model.prototypes.to(device)
-                        
-                    model.to(device)
-                    model.eval()
-                    
-                    proto_cn = model.prototypes[0]
-                    proto_ad = model.prototypes[2]
-                    
-                    loader = test_loaders[fold]
-                    fold_severities = []
-                    fold_labels = []
-                    fold_features = []
-                    
-                    with torch.no_grad():
-                        for batch in loader:
-                            imgs = batch[0].to(device)
-                            labels_4c = batch[2].numpy()
-                            x_ori, _, _ = model(imgs)
-                            severity = compute_1d_severity(x_ori, proto_cn, proto_ad)
-                            fold_severities.extend(severity.tolist())
-                            fold_labels.extend(labels_4c.tolist())
-                            fold_features.extend(x_ori.cpu().detach().numpy().tolist())
-                    
-                    # Save this specific fold's data to a tiny CSV
-                    df_data = {
-                        'Severity': fold_severities,
-                        'True Label': [class_names[lbl] for lbl in fold_labels]
-                    }
-                    
-                    # Add the 512 raw features as individual columns
-                    fold_features_np = np.array(fold_features)
-                    for i in range(fold_features_np.shape[1]):
-                        df_data[f'feature_{i}'] = fold_features_np[:, i]
-                        
-                    df = pd.DataFrame(df_data)
-                    csv_name = f"{variant}{name_suffix}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
-                    df.to_csv(os.path.join(opt.out_dir, csv_name), index=False)
-                    print(f"  -> Saved {csv_name}")
+            if not os.path.exists(ckpt_path):
+                print(f"Skipping {ckpt_name} (Not found: {ckpt_path})")
+                continue
+            
+            print(f"Extracting: {variant}{name_suffix} | {ckpt_name}")
+            
+            model = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=0.99)
+            state_dict = torch.load(ckpt_path, map_location='cpu')
+            model.load_state_dict(state_dict, strict=False)
+            
+            if 'prototypes' in state_dict:
+                model.prototypes = state_dict['prototypes'].to(device)
+            else:
+                model.prototypes = model.prototypes.to(device)
+                
+            model.to(device)
+            model.eval()
+            
+            proto_cn = model.prototypes[0]
+            proto_ad = model.prototypes[2]
+            
+            fold_severities = []
+            fold_labels = []
+            fold_features = []
+            
+            with torch.no_grad():
+                for batch in loader:
+                    imgs = batch[0].to(device)
+                    labels_4c = batch[2].numpy()
+                    x_ori, _, _ = model(imgs)
+                    severity = compute_1d_severity(x_ori, proto_cn, proto_ad)
+                    fold_severities.extend(severity.tolist())
+                    fold_labels.extend(labels_4c.tolist())
+                    fold_features.extend(x_ori.cpu().detach().numpy().tolist())
+            
+            df_data = {
+                'Severity': fold_severities,
+                'True Label': [class_names[lbl] for lbl in fold_labels]
+            }
+            
+            fold_features_np = np.array(fold_features)
+            for i in range(fold_features_np.shape[1]):
+                df_data[f'feature_{i}'] = fold_features_np[:, i]
+                
+            df = pd.DataFrame(df_data)
+            csv_name = f"{variant}{name_suffix}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
+            df.to_csv(os.path.join(opt.out_dir, csv_name), index=False)
+            print(f"  -> Saved {csv_name}")
 
 if __name__ == '__main__':
     main()

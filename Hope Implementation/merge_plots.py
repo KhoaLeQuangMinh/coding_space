@@ -4,16 +4,23 @@ from PIL import Image
 # Directories
 tsne_dir = '/Users/khoale/Downloads/analysis_output_tSNE'
 kde_dir = '/Users/khoale/Downloads/analysis_output/latent_plots'
-out_dir = '/Users/khoale/Downloads/ablation_result'
+out_dir = '/Users/khoale/Downloads/ablation_result/plots'
 
 os.makedirs(out_dir, exist_ok=True)
 
-VARIANTS = [
-    'ce', 'ins2ins', 'ins2cls', 'full', 
-    'exclude_ins2ins', 'exclude_ins2cls', 
-    'exp_triplet_ins2cls', 'triplet_only',
-    'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls',
-    'full_4class'
+VARIANTS_TO_PLOT = [
+    'ce', 
+    'ins2ins', 
+    'ins2cls', 
+    'full',
+    'exclude_ins2ins',
+    'exclude_ins2cls',
+    'exp_triplet_ins2cls',
+    'triplet_only',
+    'hierarchical_triplet_only',
+    'exp_hierarchical_triplet_ins2cls',
+    'full_4class',
+    'exp_triplet_ins2cls_4class'
 ]
 
 CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']
@@ -21,7 +28,7 @@ CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']
 print("Starting to merge t-SNE and KDE plots...")
 
 for ckpt in CHECKPOINTS:
-    for variant in VARIANTS:
+    for variant in VARIANTS_TO_PLOT:
         tsne_path = os.path.join(tsne_dir, f"tsne_{variant}_{ckpt}.png")
         kde_path = os.path.join(kde_dir, f"latent_kde_{variant}_{ckpt}.png")
         

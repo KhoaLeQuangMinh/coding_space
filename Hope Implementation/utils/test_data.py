@@ -31,14 +31,19 @@ def test_data(model, test_dataloaders, criterion):
     
     with torch.no_grad():
         model.eval()
-        for ii, (images, labels) in enumerate(test_dataloaders):
-            images, labels = images.cuda(), labels.cuda()
+        for ii, batch in enumerate(test_dataloaders):
+            images, labels = batch[0].cuda(), batch[1].cuda()
+            labels_4c = batch[2].cuda() if len(batch) > 2 else None
+            
+            num_classes = model.module.num_classes if hasattr(model, 'module') else model.num_classes
+            if num_classes == 4 and labels_4c is not None:
+                labels = labels_4c
+
             _, x, outputs = model(images)
             
             _, val_predicted = torch.max(outputs.data, 1)
             _, x_predicted = torch.max(x.data, 1)
             
-            num_classes = model.module.num_classes if hasattr(model, 'module') else model.num_classes
             for b, s, t in zip(x_predicted, val_predicted, labels):
                 t_val = t.item()
                 if num_classes == 3:

@@ -38,11 +38,8 @@ def main():
             break
             
         # img shape is [1, 1, 128, 128, 128]
-        # We downsample the MRI scan by a factor of 4 (to 32x32x32) using Average Pooling.
-        # This reduces features from 2 Million to 32,768, capturing macro-anatomical structure
-        # while preventing PCA from immediately crashing the Kaggle kernel due to RAM limits.
-        img_downsampled = F.avg_pool3d(img, kernel_size=4)
-        flat_img = img_downsampled.view(-1).numpy()
+        # Flattening without downsampling (Warning: Very high RAM usage)
+        flat_img = img.view(-1).numpy()
         
         X.append(flat_img)
         y.append(label_map_inv[label.item()])

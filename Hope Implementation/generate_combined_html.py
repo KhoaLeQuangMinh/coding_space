@@ -3,6 +3,7 @@ import os
 out_path = "/Users/khoale/Downloads/combined_latent_report.html"
 tsne_dir = "analysis_output_tSNE/fold_plots"
 pca_dir = "analysis_output_tSNE/plot_pca_folds"
+kde_dir = "analysis_output_tSNE/plot_kde_folds"
 
 VARIANTS = [
     'ce', 
@@ -16,7 +17,9 @@ VARIANTS = [
     'hierarchical_triplet_only',
     'exp_hierarchical_triplet_ins2cls',
     'full_4class',
-    'exp_triplet_ins2cls_4class'
+    'exp_triplet_ins2cls_4class',
+    'hierarchical_triplet_only_4class',
+    'qwk_hierarchical_triplet_4class'
 ]
 
 CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']
@@ -34,7 +37,9 @@ variant_names = {
     'hierarchical_triplet_only': 'L_CE + L_Hierarchical_Triplet',
     'exp_hierarchical_triplet_ins2cls': 'L_CE + L_Ins2Ins + L_Hierarchical_Triplet + L_Cls2Cls',
     'full_4class': 'L_CE + L_Ins2Ins + L_Ins2Cls + L_Cls2Cls (4-Class)',
-    'exp_triplet_ins2cls_4class': 'L_CE + L_Ins2Ins + L_Triplet + L_Cls2Cls (4-Class)'
+    'exp_triplet_ins2cls_4class': 'L_CE + L_Ins2Ins + L_Triplet + L_Cls2Cls (4-Class)',
+    'hierarchical_triplet_only_4class': 'L_CE + L_Hierarchical_Triplet (4-Class)',
+    'qwk_hierarchical_triplet_4class': 'L_QWK + L_Hierarchical_Triplet (4-Class)'
 }
 
 html = """
@@ -170,7 +175,8 @@ html = """
     <div class="analysis-card">
         <h3>🔍 Reading This Report</h3>
         <p><strong>Top Row (t-SNE):</strong> Shows local cluster separation. While beautiful, it heavily distorts global distance. Baseline models will often look falsely separated here.</p>
-        <p><strong>Bottom Row (PCA):</strong> Shows strict linear separation. This is the ultimate proof of manifold quality. If a model collapses into a single blob here, the linear classifier failed. If the model stretches into a continuous spectrum (like the Hierarchical variants), it successfully learned the biological disease progression.</p>
+        <p><strong>Middle Row (PCA):</strong> Shows strict linear separation. This is the ultimate proof of manifold quality. If a model collapses into a single blob here, the linear classifier failed. If the model stretches into a continuous spectrum (like the Hierarchical variants), it successfully learned the biological disease progression.</p>
+        <p><strong>Bottom Row (KDE):</strong> Shows the 1-dimensional distribution of Latent Severity (similarity to AD prototype minus similarity to CN prototype). A perfect model creates four distinct, sequentially ordered peaks without overlap.</p>
     </div>
 
 """
@@ -204,6 +210,18 @@ for variant in VARIANTS:
             img_path = f"{pca_dir}/{img_filename}"
             html += f'                <div class="fold-card">\n'
             html += f'                    <img src="{img_path}" alt="PCA Fold {fold}" loading="lazy">\n'
+            html += f'                    <div class="fold-label">Fold {fold}</div>\n'
+            html += f'                </div>\n'
+        html += f'            </div>\n'
+        
+        # KDE Row
+        html += f'            <div class="row-label">1D Latent KDE Distributions</div>\n'
+        html += f'            <div class="folds-container">\n'
+        for fold in FOLDS:
+            img_filename = f"latent_kde_{variant}_{ckpt}_fold{fold}.png"
+            img_path = f"{kde_dir}/{img_filename}"
+            html += f'                <div class="fold-card">\n'
+            html += f'                    <img src="{img_path}" alt="KDE Fold {fold}" loading="lazy">\n'
             html += f'                    <div class="fold-label">Fold {fold}</div>\n'
             html += f'                </div>\n'
         html += f'            </div>\n'

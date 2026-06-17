@@ -26,7 +26,9 @@ VARIANTS_TO_PLOT = [
     'hierarchical_triplet_only',
     'exp_hierarchical_triplet_ins2cls',
     'full_4class',
-    'exp_triplet_ins2cls_4class'
+    'exp_triplet_ins2cls_4class',
+    'qwk_hierarchical_triplet_4class',
+    'hierarchical_triplet_only_4class'
 ]
 
 # Checkpoints to analyze

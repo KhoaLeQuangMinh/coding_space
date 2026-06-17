@@ -24,7 +24,9 @@ VARIANTS_TO_PLOT = [
     'hierarchical_triplet_only',
     'exp_hierarchical_triplet_ins2cls',
     'full_4class',
-    'exp_triplet_ins2cls_4class'
+    'exp_triplet_ins2cls_4class',
+    'qwk_hierarchical_triplet_4class',
+    'hierarchical_triplet_only_4class'
 ]
 
 CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']

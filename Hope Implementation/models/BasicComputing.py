@@ -81,8 +81,35 @@ class BasicComputing(nn.Module):
 
         return loss
 
+    def compute_3pole_triplet(self, features, labels_4c, mean_cn, mean_mci, mean_ad):
+        if labels_4c is None or mean_cn is None or mean_mci is None or mean_ad is None:
+            return torch.tensor(0.0, device=features.device)
+            
+        loss = torch.tensor(0.0, device=features.device)
+        
+        # 1. CN and sMCI closer to CN than AD
+        idx_cn_smci = torch.nonzero((labels_4c == 0) | (labels_4c == 1)).reshape(-1)
+        if idx_cn_smci.numel() > 0:
+            loss += self.compute_relative_loss(features.index_select(0, idx_cn_smci), target_mean=mean_cn, opp_mean=mean_ad)
+            
+        # 2. AD and pMCI closer to AD than CN
+        idx_ad_pmci = torch.nonzero((labels_4c == 3) | (labels_4c == 2)).reshape(-1)
+        if idx_ad_pmci.numel() > 0:
+            loss += self.compute_relative_loss(features.index_select(0, idx_ad_pmci), target_mean=mean_ad, opp_mean=mean_cn)
+            
+        # 3. sMCI closer to MCI than CN
+        idx_smci = torch.nonzero(labels_4c == 1).reshape(-1)
+        if idx_smci.numel() > 0:
+            loss += self.compute_relative_loss(features.index_select(0, idx_smci), target_mean=mean_mci, opp_mean=mean_cn)
+            
+        # 4. pMCI closer to MCI than AD
+        idx_pmci = torch.nonzero(labels_4c == 2).reshape(-1)
+        if idx_pmci.numel() > 0:
+            loss += self.compute_relative_loss(features.index_select(0, idx_pmci), target_mean=mean_mci, opp_mean=mean_ad)
+            
+        return loss
 
-    def __call__(self, features, labels, labels_4c=None):
+    def __call__(self, features, labels, labels_4c=None, global_protos=None):
         compactness_losslist = []
         separation_losslist = []
         all_means = []
@@ -132,4 +159,14 @@ class BasicComputing(nn.Module):
         # EXPERIMENTAL 2: Hierarchical Ordinal Triplet Loss
         hierarchical_triplet_ins2cls = self.compute_hierarchical_triplet(features, labels_4c)
 
-        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls
+        # EXPERIMENTAL 3: 3-Pole Ordinal Triplet Loss (Local)
+        three_pole_local = torch.tensor(0.0, device=features.device)
+        if self.class_num == 3 and labels_4c is not None and 0 in means_dict and 1 in means_dict and 2 in means_dict:
+            three_pole_local = self.compute_3pole_triplet(features, labels_4c, means_dict[0], means_dict[1], means_dict[2])
+
+        # EXPERIMENTAL 4: 3-Pole Ordinal Triplet Loss (Global)
+        three_pole_global = torch.tensor(0.0, device=features.device)
+        if self.class_num == 3 and labels_4c is not None and global_protos is not None and global_protos.shape[0] >= 3:
+            three_pole_global = self.compute_3pole_triplet(features, labels_4c, global_protos[0], global_protos[1], global_protos[2])
+
+        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global

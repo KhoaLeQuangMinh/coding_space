@@ -32,7 +32,7 @@ import numpy as np
 # Configuration — matches your ablation scripts exactly
 # ──────────────────────────────────────────────────────────────────────
 
-LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only', 'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls', 'full_4class', 'exp_triplet_ins2cls_4class', 'hierarchical_triplet_only_4class', 'qwk_hierarchical_triplet_4class']
+LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only', 'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls', 'full_4class', 'exp_triplet_ins2cls_4class', 'hierarchical_triplet_only_4class', 'qwk_hierarchical_triplet_4class', 'exp_3pole_local', 'exp_3pole_global']
 EMA_VARIANTS  = ['None', '0.5', '0.8', '0.9', '0.99', '0.999']
 N_FOLDS       = 5
 
@@ -52,6 +52,8 @@ LOSS_LABELS = {
     'exp_triplet_ins2cls_4class': 'Triplet Ins2Cls 4-Class',
     'hierarchical_triplet_only_4class': 'Hierarchical Triplet 4-Class',
     'qwk_hierarchical_triplet_4class': 'QWK Hierarchical Triplet 4-Class',
+    'exp_3pole_local': '3-Pole Triplet (Local)',
+    'exp_3pole_global': '3-Pole Triplet (Global)',
 }
 
 # Paper-matching row labels for Table IV

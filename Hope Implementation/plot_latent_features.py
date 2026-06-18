@@ -27,7 +27,9 @@ def main():
     'full_4class',
     'exp_triplet_ins2cls_4class',
     'hierarchical_triplet_only_4class',
-    'qwk_hierarchical_triplet_4class'
+    'qwk_hierarchical_triplet_4class',
+    'exp_3pole_local',
+    'exp_3pole_global'
 ]
     # EMA_VARIANTS = ['0.1', '0.5', '0.9', '0.99', '0.999']
     

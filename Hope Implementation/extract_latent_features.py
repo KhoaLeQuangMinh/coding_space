@@ -72,7 +72,7 @@ def main():
             model.eval()
             
             proto_cn = model.prototypes[0]
-            proto_ad = model.prototypes[2]
+            proto_ad = model.prototypes[class_num - 1]
             
             fold_severities = []
             fold_labels = []

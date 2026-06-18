@@ -185,5 +185,19 @@ if __name__ == '__main__':
             plt.savefig(cm_path_3c)
             
             print(f"\nSaved Confusion Matrix plots to {expr_dir}")
+            
+            # Save logs to a text file
+            txt_path = os.path.join(expr_dir, f"{opt.name}_test_log_best_{opt.test_target}.txt")
+            with open(txt_path, 'w') as f:
+                f.write(f"TEST LOG: {opt.name} | target: {opt.test_target}\n")
+                f.write("="*50 + "\n\n")
+                f.write("TESTING METRICS SUMMARY:\n")
+                f.write(df.to_markdown() + "\n\n")
+                f.write("COMBINED 4-CLASS CONFUSION MATRIX:\n")
+                f.write(cm_df.to_markdown() + "\n\n")
+                f.write("COMBINED 3-CLASS CONFUSION MATRIX:\n")
+                f.write(cm_3c_df.to_markdown() + "\n\n")
+                
+            print(f"\nSaved Test Log to {txt_path}")
         except Exception as e:
             print(f"Could not save confusion matrix plot: {e}")

@@ -28,6 +28,8 @@ VARIANTS_TO_PLOT = [
     'full_4class',
     'exp_triplet_ins2cls_4class',
     'qwk_hierarchical_triplet_4class',
+    'exp_3pole_local',
+    'exp_3pole_global',
     'hierarchical_triplet_only_4class'
 ]
 

@@ -17,7 +17,9 @@ VARIANTS = [
     'full_4class',
     'exp_triplet_ins2cls_4class',
     'hierarchical_triplet_only_4class',
-    'qwk_hierarchical_triplet_4class'
+    'qwk_hierarchical_triplet_4class',
+    'exp_3pole_local',
+    'exp_3pole_global'
 ]
 
 CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']
@@ -37,7 +39,9 @@ variant_names = {
     'full_4class': 'L_CE + L_Ins2Ins + L_Ins2Cls + L_Cls2Cls (4-Class)',
     'exp_triplet_ins2cls_4class': 'L_CE + L_Ins2Ins + L_Triplet + L_Cls2Cls (4-Class)',
     'hierarchical_triplet_only_4class': 'L_CE + L_Hierarchical_Triplet (4-Class)',
-    'qwk_hierarchical_triplet_4class': 'L_QWK + L_Hierarchical_Triplet (4-Class)'
+    'qwk_hierarchical_triplet_4class',
+    'exp_3pole_local',
+    'exp_3pole_global': 'L_QWK + L_Hierarchical_Triplet (4-Class)'
 }
 
 html = """

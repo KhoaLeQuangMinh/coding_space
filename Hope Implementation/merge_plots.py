@@ -3,7 +3,7 @@ from PIL import Image
 
 # Directories
 tsne_dir = '/Users/khoale/Downloads/analysis_output_tSNE'
-kde_dir = '/Users/khoale/Downloads/analysis_output/latent_plots'
+kde_dir = '/Users/khoale/Downloads/analysis_output_tSNE/plot_kde_folds'
 out_dir = '/Users/khoale/Downloads/ablation_result/plots'
 
 os.makedirs(out_dir, exist_ok=True)

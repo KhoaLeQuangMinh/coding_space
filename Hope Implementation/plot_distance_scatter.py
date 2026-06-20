@@ -12,7 +12,9 @@ def plot_euclidean_scatter():
     variants = {
         'ce': 'CE (Baseline)',
         'full': 'HOPE (Full)',
-        'triplet_only': 'Proposed (Triplet Only)'
+        'triplet_only': 'Proposed (Triplet Only)',
+        'exp_3pole_local': '3-Pole Triplet (Local)',
+        'exp_3pole_global': '3-Pole Triplet (Global)'
     }
     
     # User specifically requested this only for the 2 class task (sMCI vs pMCI)
@@ -22,7 +24,7 @@ def plot_euclidean_scatter():
     color_palette = {'sMCI': '#fc8d62', 'pMCI': '#8da0cb'}
 
     for fold in folds:
-        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+        fig, axes = plt.subplots(1, 5, figsize=(30, 6))
         fig.suptitle(f'Distance to CN vs AD Prototype (2-Class: sMCI vs pMCI) - Fold {fold}', fontsize=16)
         
         for ax, (var_key, var_name) in zip(axes, variants.items()):

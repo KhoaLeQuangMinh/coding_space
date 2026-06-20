@@ -10,13 +10,15 @@ out_dir = "/Users/khoale/Downloads/ablation_result/statistical_proof/"
 variants = {
     'ce': 'CE (Baseline)',
     'full': 'HOPE (Full)',
-    'triplet_only': 'Proposed (Triplet Only)'
+    'triplet_only': 'Proposed (Triplet Only)',
+    'exp_3pole_local': '3-Pole Triplet (Local)',
+    'exp_3pole_global': '3-Pole Triplet (Global)'
 }
 
 features_cols = [f'feature_{i}' for i in range(128)]
 labels_order = ['CN', 'sMCI', 'pMCI', 'AD']
 
-fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+fig, axes = plt.subplots(1, 5, figsize=(30, 6))
 
 for ax, (var_key, var_name) in zip(axes, variants.items()):
     all_distances = []

@@ -13,7 +13,9 @@ variants = [
     'exclude_ins2ins',
     'exclude_ins2cls',
     'exp_triplet_ins2cls',
-    'triplet_only'
+    'triplet_only',
+    'exp_3pole_local',
+    'exp_3pole_global'
 ]
 
 row_labels = {
@@ -25,6 +27,8 @@ row_labels = {
     'exclude_ins2cls': 'Exclude Ins2Cls Ablation',
     'exp_triplet_ins2cls': 'Triplet Ins2Cls (Poles)',
     'triplet_only': 'CE + Triplet Only',
+    'exp_3pole_local': 'L_CE + L_Ins2Ins + L_3Pole_Triplet (Local) + L_Cls2Cls',
+    'exp_3pole_global': 'L_CE + L_Ins2Ins + L_3Pole_Triplet (Global) + L_Cls2Cls'
 }
 
 def export_table(target):

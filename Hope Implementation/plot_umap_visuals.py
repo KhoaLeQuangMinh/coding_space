@@ -12,7 +12,9 @@ def plot_umap_visuals():
     variants = {
         'ce': 'CE (Baseline)',
         'full': 'HOPE (Full)',
-        'triplet_only': 'Proposed (Triplet Only)'
+        'triplet_only': 'Proposed (Triplet Only)',
+        'exp_3pole_local': '3-Pole Triplet (Local)',
+        'exp_3pole_global': '3-Pole Triplet (Global)'
     }
     
     networks = ['best_2c_net', 'best_3c_net', 'best_4c_net']
@@ -23,7 +25,7 @@ def plot_umap_visuals():
 
     for net in networks:
         for fold in folds:
-            fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+            fig, axes = plt.subplots(1, 5, figsize=(30, 6))
             fig.suptitle(f'UMAP Projection - Fold {fold} ({net})', fontsize=16)
             
             for ax, (var_key, var_name) in zip(axes, variants.items()):

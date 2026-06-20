@@ -16,7 +16,7 @@ def extract_text_from_pdf(pdf_path):
 
 def parse_matrices(text):
     # results[variant][model][size][fold] = matrix
-    results = {'CE': {}, 'FULL': {}, 'TRIPLET_ONLY': {}}
+    results = {'CE': {}, 'FULL': {}, 'TRIPLET_ONLY': {}, 'EXP_3POLE_LOCAL': {}, 'EXP_3POLE_GLOBAL': {}}
     for v in results:
         for m in ['best_2c_net', 'best_3c_net', 'best_4c_net']:
             results[v][m] = {'3c': {}, '4c': {}}
@@ -62,9 +62,47 @@ def parse_matrices(text):
                 
     return results
 
+def parse_txt_logs(results):
+    log_dir = '/Users/khoale/Downloads/ablation_result/working/coding_space/Hope Implementation/checkpoints'
+    for v_display, v_folder in [('EXP_3POLE_LOCAL', 'ablation_loss_exp_3pole_local'), ('EXP_3POLE_GLOBAL', 'ablation_loss_exp_3pole_global')]:
+        for model in ['best_2c_net', 'best_3c_net', 'best_4c_net']:
+            net_short = model.split('_')[1] # '2c', '3c', '4c'
+            for fold in [1, 2, 3, 4, 5]:
+                log_path = os.path.join(log_dir, f"{v_folder}_fold{fold}", f"{v_folder}_test_log_best_{net_short}.txt")
+                if not os.path.exists(log_path):
+                    continue
+                
+                with open(log_path, 'r') as f:
+                    text = f.read()
+                    
+                # 4-class
+                block_4c_match = re.search(r'COMBINED 4-CLASS CONFUSION MATRIX.*?(?=COMBINED 3-CLASS|\Z)', text, re.DOTALL)
+                if block_4c_match:
+                    block_4c = block_4c_match.group(0)
+                    rows_4c = []
+                    for c in ['True CN', 'True sMCI', 'True pMCI', 'True AD']:
+                        m_row = re.search(c + r'\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|', block_4c)
+                        if m_row:
+                            rows_4c.append([int(x) for x in m_row.groups()])
+                    if len(rows_4c) == 4:
+                        results[v_display][model]['4c'][fold] = np.array(rows_4c)
+
+                # 3-class
+                block_3c_match = re.search(r'COMBINED 3-CLASS CONFUSION MATRIX.*?(?=\Z)', text, re.DOTALL)
+                if block_3c_match:
+                    block_3c = block_3c_match.group(0)
+                    rows_3c = []
+                    for c in ['True CN', 'True MCI', 'True AD']:
+                        m_row = re.search(c + r'\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|', block_3c)
+                        if m_row:
+                            rows_3c.append([int(x) for x in m_row.groups()])
+                    if len(rows_3c) == 3:
+                        results[v_display][model]['3c'][fold] = np.array(rows_3c)
+    return results
+
 def compute_2c_from_csvs(results):
     csv_dir = '/Users/khoale/Downloads/analysis_output_tSNE/extracted_features'
-    variants = {'CE': 'ce', 'FULL': 'full', 'TRIPLET_ONLY': 'triplet_only'}
+    variants = {'CE': 'ce', 'FULL': 'full', 'TRIPLET_ONLY': 'triplet_only', 'EXP_3POLE_LOCAL': 'exp_3pole_local', 'EXP_3POLE_GLOBAL': 'exp_3pole_global'}
     networks = ['best_2c_net', 'best_3c_net', 'best_4c_net']
     folds = [1, 2, 3, 4, 5]
     
@@ -103,7 +141,9 @@ def plot_confusion_matrices(results, out_dir):
     var_map = {
         'CE': 'CE (Baseline)',
         'FULL': 'HOPE (Full)',
-        'TRIPLET_ONLY': 'Proposed (Triplet Only)'
+        'TRIPLET_ONLY': 'Proposed (Triplet Only)',
+        'EXP_3POLE_LOCAL': '3-Pole Triplet (Local)',
+        'EXP_3POLE_GLOBAL': '3-Pole Triplet (Global)'
     }
     
     networks = ['best_2c_net', 'best_3c_net', 'best_4c_net']
@@ -111,7 +151,7 @@ def plot_confusion_matrices(results, out_dir):
     
     for net in networks:
         for size in ['2c', '3c', '4c']:
-            fig, axes = plt.subplots(3, 6, figsize=(32, 16))
+            fig, axes = plt.subplots(5, 6, figsize=(32, 28))
             if size == '2c':
                 title_size = '2-Class (sMCI vs pMCI)'
                 labels = ['sMCI', 'pMCI']
@@ -127,7 +167,7 @@ def plot_confusion_matrices(results, out_dir):
                 
             fig.suptitle(f'{title_size} Confusion Matrices across Folds - {net}', fontsize=24)
             
-            for r, variant in enumerate(['CE', 'FULL', 'TRIPLET_ONLY']):
+            for r, variant in enumerate(['CE', 'FULL', 'TRIPLET_ONLY', 'EXP_3POLE_LOCAL', 'EXP_3POLE_GLOBAL']):
                 var_dict = results[variant][net][size]
                 
                 # Calculate aggregated matrix
@@ -152,7 +192,7 @@ def plot_confusion_matrices(results, out_dir):
                         ax.set_title(col_title, fontsize=16)
                         if c == 0:
                             ax.set_ylabel('True Label', fontsize=14)
-                        if r == 2:
+                        if r == 4:
                             ax.set_xlabel('Predicted Label', fontsize=14)
                     else:
                         ax.set_title(f"{col_title}\n(Data Missing)", fontsize=16)
@@ -178,6 +218,7 @@ def main():
         
     print("Parsing matrices...")
     results = parse_matrices(full_text)
+    results = parse_txt_logs(results)
     results = compute_2c_from_csvs(results)
     
     print("Plotting detailed grids...")

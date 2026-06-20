@@ -3,10 +3,11 @@ import torch.nn as nn
 
 
 class BasicComputing(nn.Module):
-    def __init__(self, class_num, gpu_ids=None, dim=512):
+    def __init__(self, class_num, gpu_ids=None, dim=512, margin=0.0):
         super(BasicComputing, self).__init__()
         self.dim = dim
         self.class_num = class_num
+        self.margin = margin
 
     # compute current prototype
     def compute_mean(self, x):
@@ -22,7 +23,9 @@ class BasicComputing(nn.Module):
             , dim=0).reshape(-1)
 
     # compute the new relative instance-to-class loss (triplet logic)
-    def compute_relative_loss(self, x, target_mean, opp_mean, margin=0.0):
+    def compute_relative_loss(self, x, target_mean, opp_mean, margin=None):
+        if margin is None:
+            margin = self.margin
         if x.shape[0] == 0:
             return torch.tensor(0.0, device=x.device)
         dist_target = torch.sum((x - target_mean) ** 2, dim=1)
@@ -146,14 +149,14 @@ class BasicComputing(nn.Module):
             idx_left = torch.nonzero((labels_4c == 0) | (labels_4c == 1)).reshape(-1)
             if idx_left.numel() > 0:
                 x_left = features.index_select(0, idx_left)
-                loss_left = self.compute_relative_loss(x_left, target_mean=mean_cn, opp_mean=mean_ad, margin=0.0)
+                loss_left = self.compute_relative_loss(x_left, target_mean=mean_cn, opp_mean=mean_ad)
                 triplet_ins2cls += loss_left
                 
             # Right side: pMCI (2) and AD (3) -> Target AD, Opp CN
             idx_right = torch.nonzero((labels_4c == 2) | (labels_4c == 3)).reshape(-1)
             if idx_right.numel() > 0:
                 x_right = features.index_select(0, idx_right)
-                loss_right = self.compute_relative_loss(x_right, target_mean=mean_ad, opp_mean=mean_cn, margin=0.0)
+                loss_right = self.compute_relative_loss(x_right, target_mean=mean_ad, opp_mean=mean_cn)
                 triplet_ins2cls += loss_right
 
         # EXPERIMENTAL 2: Hierarchical Ordinal Triplet Loss

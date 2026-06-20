@@ -39,7 +39,7 @@ def main():
     print(f"Using device: {device}")
 
     # Configuration matching the ablation analysis
-    LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'exp_3pole_local', 'exp_3pole_global']
+    LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'exp_3pole_local', 'exp_3pole_global', '3pole_local_only', '3pole_global_only']
     CHECKPOINTS = ['best_2c_net.pth', 'best_3c_net.pth', 'best_4c_net.pth']
     N_FOLDS = 5
 

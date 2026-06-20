@@ -139,6 +139,10 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                 loss_hyb = loss_ins2ins + (three_pole_local / features.shape[1]) + loss_cls2cls
             elif ablation_loss == 'exp_3pole_global':
                 loss_hyb = loss_ins2ins + (three_pole_global / features.shape[1]) + loss_cls2cls
+            elif ablation_loss == '3pole_local_only':
+                loss_hyb = (three_pole_local / features.shape[1])
+            elif ablation_loss == '3pole_global_only':
+                loss_hyb = (three_pole_global / features.shape[1])
             elif ablation_loss in ['hierarchical_triplet_only', 'qwk_hierarchical_triplet']:
                 loss_hyb = (hierarchical_triplet_ins2cls / features.shape[1])
             else: # 'full'
@@ -160,9 +164,9 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             train_loss_ins2ins += loss_ins2ins.item()
             if ablation_loss in ['exp_triplet_ins2cls', 'triplet_only']:
                 train_loss_ins2cls += (triplet_ins2cls / features.shape[1]).item()
-            elif ablation_loss == 'exp_3pole_local':
+            elif ablation_loss in ['exp_3pole_local', '3pole_local_only']:
                 train_loss_ins2cls += (three_pole_local / features.shape[1]).item()
-            elif ablation_loss == 'exp_3pole_global':
+            elif ablation_loss in ['exp_3pole_global', '3pole_global_only']:
                 train_loss_ins2cls += (three_pole_global / features.shape[1]).item()
             else:
                 train_loss_ins2cls += loss_ins2cls.item()

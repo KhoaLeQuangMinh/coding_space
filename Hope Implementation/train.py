@@ -30,7 +30,7 @@ def run_fold(opt, current_fold):
     scheduler = get_scheduler(optimizer, opt)
 
     # criterion preparation
-    basiccomputing = BasicComputing(class_num=opt.class_num, gpu_ids=opt.gpu_ids)
+    basiccomputing = BasicComputing(class_num=opt.class_num, gpu_ids=opt.gpu_ids, margin=opt.triplet_margin)
     criterion = nn.CrossEntropyLoss()
     criterionRank = RankLoss(opt.interpolation_lambda)
 

@@ -8,7 +8,7 @@ import numpy as np
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--csv_dir', type=str, default='/Users/khoale/Downloads/analysis_output_tSNE/extracted_features', help='path to the downloaded CSV files')
-    parser.add_argument('--out_dir', type=str, default='/Users/khoale/Downloads/analysis_output_tSNE/plot_kde_folds', help='where to save the final plots')
+    parser.add_argument('--out_dir', type=str, default='/Users/khoale/Downloads/plot_display/plots/kde_folds', help='where to save the final plots')
     opt = parser.parse_args()
 
     os.makedirs(opt.out_dir, exist_ok=True)

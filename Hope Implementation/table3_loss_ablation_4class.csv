@@ -9,3 +9,5 @@ Triplet Ins2Cls (Poles),best_2c_net,5,46.0 ± 2.6,69.8 ± 4.6,40.7 ± 7.3,43.8 �
 CE + Triplet Only,best_2c_net,5,40.7 ± 9.8,70.5 ± 6.6,34.6 ± 12.8,37.9 ± 15.6,40.7 ± 9.8
 L_CE + L_Ins2Ins + L_3Pole_Triplet (Local) + L_Cls2Cls,best_2c_net,5,43.7 ± 4.1,73.7 ± 4.3,42.5 ± 6.0,49.3 ± 8.3,43.7 ± 4.1
 L_CE + L_Ins2Ins + L_3Pole_Triplet (Global) + L_Cls2Cls,best_2c_net,5,43.0 ± 7.7,73.5 ± 3.8,41.6 ± 9.0,50.1 ± 9.0,43.0 ± 7.7
+L_CE + L_3Pole_Triplet (Local) Only,best_2c_net,5,43.3 ± 6.2,73.3 ± 4.5,42.3 ± 7.5,55.3 ± 5.0,43.3 ± 6.2
+L_CE + L_3Pole_Triplet (Global) Only,best_2c_net,5,43.2 ± 4.6,71.8 ± 4.1,43.4 ± 5.2,50.2 ± 8.8,43.2 ± 4.6

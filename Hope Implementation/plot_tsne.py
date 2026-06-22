@@ -10,7 +10,7 @@ from sklearn.manifold import TSNE
 # ──────────────────────────────────────────────────────────────────────
 # Matches the extracted features from your Kaggle output
 csv_dir = '/Users/khoale/Downloads/analysis_output_tSNE/extracted_features'
-out_dir = '/Users/khoale/Downloads/analysis_output_tSNE'
+out_dir = '/Users/khoale/Downloads/plot_display/plots/tsne_combined'
 os.makedirs(out_dir, exist_ok=True)
 
 # Define the models we want to plot
@@ -30,6 +30,8 @@ VARIANTS_TO_PLOT = [
     'qwk_hierarchical_triplet_4class',
     'exp_3pole_local',
     'exp_3pole_global',
+    '3pole_local_only',
+    '3pole_global_only',
     'hierarchical_triplet_only_4class'
 ]
 

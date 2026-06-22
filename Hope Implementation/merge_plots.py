@@ -2,9 +2,9 @@ import os
 from PIL import Image
 
 # Directories
-tsne_dir = '/Users/khoale/Downloads/analysis_output_tSNE'
-kde_dir = '/Users/khoale/Downloads/analysis_output_tSNE/plot_kde_folds'
-out_dir = '/Users/khoale/Downloads/ablation_result/plots'
+tsne_dir = '/Users/khoale/Downloads/plot_display/plots/tsne_combined'
+kde_dir = '/Users/khoale/Downloads/plot_display/plots/kde_combined'
+out_dir = '/Users/khoale/Downloads/plot_display/plots/merged'
 
 os.makedirs(out_dir, exist_ok=True)
 
@@ -24,7 +24,9 @@ VARIANTS_TO_PLOT = [
     'hierarchical_triplet_only_4class',
     'qwk_hierarchical_triplet_4class',
     'exp_3pole_local',
-    'exp_3pole_global'
+    'exp_3pole_global',
+    '3pole_local_only',
+    '3pole_global_only'
 ]
 
 CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']

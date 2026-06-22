@@ -9,7 +9,7 @@ from sklearn.manifold import TSNE
 # Configuration
 # ──────────────────────────────────────────────────────────────────────
 csv_dir = '/Users/khoale/Downloads/analysis_output_tSNE/extracted_features'
-out_dir = '/Users/khoale/Downloads/analysis_output_tSNE/fold_plots'
+out_dir = '/Users/khoale/Downloads/plot_display/plots/tsne_folds'
 os.makedirs(out_dir, exist_ok=True)
 
 VARIANTS_TO_PLOT = [
@@ -28,6 +28,8 @@ VARIANTS_TO_PLOT = [
     'qwk_hierarchical_triplet_4class',
     'exp_3pole_local',
     'exp_3pole_global',
+    '3pole_local_only',
+    '3pole_global_only',
     'hierarchical_triplet_only_4class'
 ]
 

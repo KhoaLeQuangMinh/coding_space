@@ -24,8 +24,9 @@ def analyze_prototype(ckpt_path):
     num_classes, dim = prototypes.shape
     norms = np.linalg.norm(prototypes, axis=1)
     
-    # Normalize to calculate cosine similarity
-    protos_norm = prototypes / norms[:, np.newaxis]
+    # Safe division: replace zero norms with 1.0 to avoid division by zero warnings
+    safe_norms = np.where(norms == 0, 1.0, norms)
+    protos_norm = prototypes / safe_norms[:, np.newaxis]
     cosine_sim = np.dot(protos_norm, protos_norm.T)
     
     off_diag_vals = []

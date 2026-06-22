@@ -47,8 +47,9 @@ def main():
     for i, norm in enumerate(norms):
         print(f"  Class {i} Prototype Norm: {norm:.4f}")
 
-    # L2 normalize the prototypes to compute cosine similarity
-    protos_norm = prototypes / norms[:, np.newaxis]
+    # L2 normalize the prototypes to compute cosine similarity (safely handling zero norms)
+    safe_norms = np.where(norms == 0, 1.0, norms)
+    protos_norm = prototypes / safe_norms[:, np.newaxis]
     cosine_sim_matrix = np.dot(protos_norm, protos_norm.T)
 
     print("\n--- Pairwise Cosine Similarity Matrix ---")

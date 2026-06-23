@@ -34,7 +34,9 @@ subdirs = {
     'kde_folds': os.path.join(plots_dest, 'kde_folds'),
     'merged': os.path.join(plots_dest, 'merged'),
     'confusion_matrices': os.path.join(plots_dest, 'confusion_matrices'),
-    'comparative': os.path.join(plots_dest, 'comparative')
+    'comparative': os.path.join(plots_dest, 'comparative'),
+    '1d_pca': os.path.join(plots_dest, '1d_pca'),
+    'confusion_matrix_detailed': os.path.join(plots_dest, 'confusion_matrix_detailed')
 }
 
 # Loss variants lists & labels
@@ -114,6 +116,20 @@ for ckpt in CHECKPOINTS:
             if ckpt not in comparative_registry['umap']:
                 comparative_registry['umap'][ckpt] = {}
             comparative_registry['umap'][ckpt][fold] = f"plots/comparative/{umap_name}"
+            
+        # 1D PCA
+        pca_1d_name = f"1D_PCA_{ckpt}_fold{fold}.png"
+        src_p = os.path.join(src_umap, pca_1d_name)
+        dest_p = os.path.join(subdirs['1d_pca'], pca_1d_name)
+        move_file(src_p, dest_p)
+
+# Detailed Confusion Matrices
+for size in ['2c', '3c', '4c']:
+    for ckpt in CHECKPOINTS:
+        cm_name = f"Confusion_Matrix_Detailed_{size}_{ckpt}.png"
+        src_c = os.path.join(src_umap, cm_name)
+        dest_c = os.path.join(subdirs['confusion_matrix_detailed'], cm_name)
+        move_file(src_c, dest_c)
 
 # Distance Scatter
 for fold in FOLDS:
@@ -588,6 +604,15 @@ html_template = """<!DOCTYPE html>
             <div class="menu-item active" onclick="switchTab('overview')">
                 <span>Overview (UMAP & Distances)</span>
             </div>
+            <div class="menu-item" id="menu-exploration" onclick="switchTab('exploration')">
+                <span>Exploration (Online Prototypes)</span>
+            </div>
+            <div class="menu-item" id="menu-1d-pca" onclick="switchTab('1d-pca')">
+                <span>1D PCA Projections</span>
+            </div>
+            <div class="menu-item" id="menu-cm-detailed" onclick="switchTab('cm-detailed')">
+                <span>Detailed Confusion Matrices</span>
+            </div>
             
             <div class="menu-section-title">Ablation Experiments</div>
             <div id="experiments-list"></div>
@@ -662,7 +687,7 @@ html_template = """<!DOCTYPE html>
                 </select>
             </div>
             
-            <div class="filter-group">
+            <div class="filter-group" id="fold-filter-group">
                 <span class="filter-label">Evaluation Fold</span>
                 <select class="filter-select" id="select-fold" onchange="onFilterChange()">
                     <option value="1" selected>Fold 1</option>
@@ -670,6 +695,23 @@ html_template = """<!DOCTYPE html>
                     <option value="3">Fold 3</option>
                     <option value="4">Fold 4</option>
                     <option value="5">Fold 5</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" id="metric-filter-group" style="display:none;">
+                <span class="filter-label">Metric Space</span>
+                <select class="filter-select" id="select-metric" onchange="onFilterChange()">
+                    <option value="distance" selected>Euclidean Distance (L2-Normalized)</option>
+                    <option value="cosine">Cosine Similarity</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" id="cm-size-filter-group" style="display:none;">
+                <span class="filter-label">Classification Task</span>
+                <select class="filter-select" id="select-cm-size" onchange="onFilterChange()">
+                    <option value="2c" selected>2-Class (sMCI vs pMCI)</option>
+                    <option value="3c">3-Class (CN vs MCI vs AD)</option>
+                    <option value="4c">4-Class (CN vs sMCI vs pMCI vs AD)</option>
                 </select>
             </div>
         </div>
@@ -867,6 +909,45 @@ html_template = """<!DOCTYPE html>
                 document.getElementById('filters-container').style.display = 'none';
                 
                 updateSelectorVisibility();
+            } else if (tabId === 'exploration') {
+                document.getElementById('menu-exploration').classList.add('active');
+                document.getElementById('ws-title').innerText = "Exploration: Online Prototype Analysis";
+                document.getElementById('ws-subtitle').innerText = "Comparing actual learned prototypes from checkpoints against patient features (sMCI/pMCI distance/similarity to CN/AD).";
+                document.getElementById('metrics-card').style.display = 'none';
+                document.getElementById('plots-section-title').innerText = "Online Prototype Scatter Grid (CN vs AD)";
+                
+                // Show exploration controls (Model & Metric dropdowns), hide others
+                document.getElementById('overview-comparison-panel').style.display = 'none';
+                document.getElementById('filters-container').style.display = 'flex';
+                document.getElementById('fold-filter-group').style.display = 'none';
+                document.getElementById('metric-filter-group').style.display = 'block';
+                document.getElementById('cm-size-filter-group').style.display = 'none';
+            } else if (tabId === '1d-pca') {
+                document.getElementById('menu-1d-pca').classList.add('active');
+                document.getElementById('ws-title').innerText = "1D PCA Projections";
+                document.getElementById('ws-subtitle').innerText = "Comparative 1D PCA projections side-by-side for Cross-Entropy baseline, HOPE (Full), and Proposed (Triplet Only).";
+                document.getElementById('metrics-card').style.display = 'none';
+                document.getElementById('plots-section-title').innerText = "1D PCA Projection Grid";
+                
+                // Show checkpoint and fold filters
+                document.getElementById('overview-comparison-panel').style.display = 'none';
+                document.getElementById('filters-container').style.display = 'flex';
+                document.getElementById('fold-filter-group').style.display = 'block';
+                document.getElementById('metric-filter-group').style.display = 'none';
+                document.getElementById('cm-size-filter-group').style.display = 'none';
+            } else if (tabId === 'cm-detailed') {
+                document.getElementById('menu-cm-detailed').classList.add('active');
+                document.getElementById('ws-title').innerText = "Detailed Confusion Matrices";
+                document.getElementById('ws-subtitle').innerText = "Comprehensive confusion matrices across all 5 folds plus aggregate results for key models (CE vs HOPE vs Proposed vs 3-Pole Local vs 3-Pole Global).";
+                document.getElementById('metrics-card').style.display = 'none';
+                document.getElementById('plots-section-title').innerText = "Detailed Confusion Matrix Grid (5 Folds + Aggregated)";
+                
+                // Show checkpoint and cm-size filters
+                document.getElementById('overview-comparison-panel').style.display = 'none';
+                document.getElementById('filters-container').style.display = 'flex';
+                document.getElementById('fold-filter-group').style.display = 'none';
+                document.getElementById('metric-filter-group').style.display = 'none';
+                document.getElementById('cm-size-filter-group').style.display = 'block';
             } else {
                 document.getElementById('menu-' + tabId).classList.add('active');
                 document.getElementById('ws-title').innerText = lossLabels[tabId];
@@ -904,6 +985,9 @@ html_template = """<!DOCTYPE html>
                 // Hide overview controls, show individual controls
                 document.getElementById('overview-comparison-panel').style.display = 'none';
                 document.getElementById('filters-container').style.display = 'flex';
+                document.getElementById('fold-filter-group').style.display = 'block';
+                document.getElementById('metric-filter-group').style.display = 'none';
+                document.getElementById('cm-size-filter-group').style.display = 'none';
             }
             
             renderWorkspace();
@@ -985,6 +1069,51 @@ html_template = """<!DOCTYPE html>
                 });
                 
                 container.appendChild(grid);
+            } else if (currentTab === 'exploration') {
+                const ckpt = document.getElementById('select-ckpt').value;
+                const metric = document.getElementById('select-metric').value;
+                const expSec = document.createElement('div');
+                expSec.className = 'plots-grid';
+                expSec.style.display = 'flex';
+                expSec.style.flexDirection = 'column';
+                expSec.style.gap = '30px';
+                
+                const exps = [
+                    { key: "CE + Triplets only", label: "CE + Triplets only (Standard Triplet Loss)" },
+                    { key: "CE + 3 poles triplets only local", label: "CE + 3-Pole Triplets Local" },
+                    { key: "CE + 3 poles triplets only global", label: "CE + 3-Pole Triplets Global" },
+                    { key: "CE + 3 poles Triplets + Local EMA", label: "CE + 3-Pole Triplets + Local EMA (Rank/Ins2Ins/Cls2Cls)" },
+                    { key: "CE + 3 poles Triplets + Global EMA ", label: "CE + 3-Pole Triplets + Global EMA (Rank/Ins2Ins/Cls2Cls)" }
+                ];
+                
+                exps.forEach(exp => {
+                    const suffix = (metric === 'cosine') ? '_cosine' : '_normalized';
+                    const path = `plots/online_distance_scatter/online_scatter_${exp.key}_${ckpt}${suffix}.png`;
+                    const labelTitle = (metric === 'cosine') ? `${exp.label} (Cosine Similarity)` : `${exp.label} (Normalized Distance)`;
+                    expSec.appendChild(createPlotCard(labelTitle, path, true));
+                });
+                
+                container.appendChild(expSec);
+            } else if (currentTab === '1d-pca') {
+                const ckpt = document.getElementById('select-ckpt').value;
+                const fold = parseInt(document.getElementById('select-fold').value);
+                const path = `plots/1d_pca/1D_PCA_${ckpt}_fold${fold}.png`;
+                const labelTitle = `1D PCA Projection - Fold ${fold} (${ckpt.replace('_net','').replace('best_','').toUpperCase()})`;
+                
+                const expSec = document.createElement('div');
+                expSec.className = 'plots-grid';
+                expSec.appendChild(createPlotCard(labelTitle, path, true));
+                container.appendChild(expSec);
+            } else if (currentTab === 'cm-detailed') {
+                const ckpt = document.getElementById('select-ckpt').value;
+                const size = document.getElementById('select-cm-size').value;
+                const path = `plots/confusion_matrix_detailed/Confusion_Matrix_Detailed_${size}_${ckpt}.png`;
+                const labelTitle = `${size.toUpperCase()} Detailed Confusion Matrix Grid - ${ckpt.replace('_net','').replace('best_','').toUpperCase()}`;
+                
+                const expSec = document.createElement('div');
+                expSec.className = 'plots-grid';
+                expSec.appendChild(createPlotCard(labelTitle, path, true));
+                container.appendChild(expSec);
             } else {
                 const ckpt = document.getElementById('select-ckpt').value;
                 const fold = parseInt(document.getElementById('select-fold').value);

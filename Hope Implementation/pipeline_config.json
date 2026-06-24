@@ -205,7 +205,7 @@
     },
     "triplet_only_margin5": {
       "display_name": "Triplet Only (Margin 5.0)",
-      "loss_type": "full",
+      "loss_type": "triplet_only",
       "num_classes": 3,
       "triplet_margin": 5.0,
       "m": 0.9

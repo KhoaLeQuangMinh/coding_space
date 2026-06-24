@@ -22,6 +22,9 @@ def main():
     'exclude_ins2cls',
     'exp_triplet_ins2cls',
     'triplet_only',
+    'triplet_only_margin0.3',
+    'triplet_only_margin3.0',
+    'triplet_only_ema0.5_margin0.0',
     'hierarchical_triplet_only',
     'exp_hierarchical_triplet_ins2cls',
     'full_4class',
@@ -31,7 +34,9 @@ def main():
     'exp_3pole_local',
     'exp_3pole_global',
     '3pole_local_only',
-    '3pole_global_only'
+    '3pole_global_only',
+    '3pole_local_only_margin0.0',
+    '3pole_global_only_margin0.0'
 ]
     # EMA_VARIANTS = ['0.1', '0.5', '0.9', '0.99', '0.999']
     

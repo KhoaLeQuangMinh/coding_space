@@ -7,14 +7,17 @@ import scipy.stats
 
 data_dir = "/Users/khoale/Downloads/analysis_output_tSNE/extracted_features/"
 out_dir = "/Users/khoale/Downloads/ablation_result/statistical_proof/"
+os.makedirs(out_dir, exist_ok=True)
 
 variants = {
     'ce': 'CE (Baseline)',
     'full': 'HOPE (Full)',
-    'triplet_only': 'Proposed (Triplet Only)'
+    'triplet_only_margin0.3': 'Proposed (Triplet Only) (Margin 0.3)',
+    'triplet_only_margin3.0': 'Proposed (Triplet Only) (Margin 3.0)',
+    'triplet_only_ema0.5_margin0.0': 'Proposed (Triplet Only) (EMA 0.5, Margin 0.0)'
 }
 
-colors = {'ce': 'gray', 'full': 'blue', 'triplet_only': 'red'}
+colors = {'ce': 'gray', 'full': 'blue', 'triplet_only_margin0.3': 'red', 'triplet_only_margin3.0': 'purple', 'triplet_only_ema0.5_margin0.0': 'orange'}
 
 plt.figure(figsize=(8, 8))
 
@@ -77,11 +80,15 @@ plt.title('ROC Curve: sMCI vs pMCI Prediction (Cross-Sectional)')
 plt.legend(loc="lower right")
 
 # Calculate p-values (Paired t-test)
-p_ce = scipy.stats.ttest_rel(auc_results['triplet_only'], auc_results['ce']).pvalue
-p_full = scipy.stats.ttest_rel(auc_results['triplet_only'], auc_results['full']).pvalue
+p_ce_03 = scipy.stats.ttest_rel(auc_results['triplet_only_margin0.3'], auc_results['ce']).pvalue
+p_full_03 = scipy.stats.ttest_rel(auc_results['triplet_only_margin0.3'], auc_results['full']).pvalue
+p_ce_30 = scipy.stats.ttest_rel(auc_results['triplet_only_margin3.0'], auc_results['ce']).pvalue if 'triplet_only_margin3.0' in auc_results and len(auc_results['triplet_only_margin3.0']) == 5 else 1.0
+p_full_30 = scipy.stats.ttest_rel(auc_results['triplet_only_margin3.0'], auc_results['full']).pvalue if 'triplet_only_margin3.0' in auc_results and len(auc_results['triplet_only_margin3.0']) == 5 else 1.0
+p_ce_ema = scipy.stats.ttest_rel(auc_results['triplet_only_ema0.5_margin0.0'], auc_results['ce']).pvalue if 'triplet_only_ema0.5_margin0.0' in auc_results and len(auc_results['triplet_only_ema0.5_margin0.0']) == 5 else 1.0
+p_full_ema = scipy.stats.ttest_rel(auc_results['triplet_only_ema0.5_margin0.0'], auc_results['full']).pvalue if 'triplet_only_ema0.5_margin0.0' in auc_results and len(auc_results['triplet_only_ema0.5_margin0.0']) == 5 else 1.0
 
 # Add p-value text to plot
-textstr = f"Paired t-test (5 Folds):\nProposed vs CE: p = {p_ce:.4f}\nProposed vs HOPE: p = {p_full:.4f}"
+textstr = f"Paired t-test (5 Folds):\nProposed(0.3) vs CE: p={p_ce_03:.4f}, vs HOPE: p={p_full_03:.4f}\nProposed(3.0) vs CE: p={p_ce_30:.4f}, vs HOPE: p={p_full_30:.4f}\nProposed(EMA) vs CE: p={p_ce_ema:.4f}, vs HOPE: p={p_full_ema:.4f}"
 plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=10,
          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 

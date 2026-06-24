@@ -32,7 +32,14 @@ import numpy as np
 # Configuration — matches your ablation scripts exactly
 # ──────────────────────────────────────────────────────────────────────
 
-LOSS_VARIANTS = ['ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls', 'exp_triplet_ins2cls', 'triplet_only', 'hierarchical_triplet_only', 'exp_hierarchical_triplet_ins2cls', 'full_4class', 'exp_triplet_ins2cls_4class', 'hierarchical_triplet_only_4class', 'qwk_hierarchical_triplet_4class', 'exp_3pole_local', 'exp_3pole_global', '3pole_local_only', '3pole_global_only']
+LOSS_VARIANTS = [
+    'ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls',
+    'exp_triplet_ins2cls', 'triplet_only', 'triplet_only_margin0.3', 'triplet_only_margin3.0', 'triplet_only_ema0.5_margin0.0', 'hierarchical_triplet_only',
+    'exp_hierarchical_triplet_ins2cls', 'full_4class', 'exp_triplet_ins2cls_4class',
+    'hierarchical_triplet_only_4class', 'qwk_hierarchical_triplet_4class',
+    'exp_3pole_local', 'exp_3pole_global', '3pole_local_only', '3pole_global_only',
+    '3pole_local_only_margin0.0', '3pole_global_only_margin0.0'
+]
 EMA_VARIANTS  = ['None', '0.5', '0.8', '0.9', '0.99', '0.999']
 N_FOLDS       = 5
 
@@ -46,6 +53,9 @@ LOSS_LABELS = {
     'exclude_ins2cls': 'Exclude Ins2Cls Ablation',
     'exp_triplet_ins2cls': 'Triplet Ins2Cls (Poles)',
     'triplet_only': 'CE + Triplet Only',
+    'triplet_only_margin0.3': 'CE + Triplet Only (Margin 0.3)',
+    'triplet_only_margin3.0': 'CE + Triplet Only (Margin 3.0)',
+    'triplet_only_ema0.5_margin0.0': 'CE + Triplet Only (EMA 0.5, Margin 0.0)',
     'hierarchical_triplet_only': 'CE + Hierarchical Triplet Only',
     'exp_hierarchical_triplet_ins2cls': 'Hierarchical Triplet Ins2Cls',
     'full_4class': 'HOPE 4-Class (No EMA)',
@@ -56,6 +66,8 @@ LOSS_LABELS = {
     'exp_3pole_global': '3-Pole Triplet (Global)',
     '3pole_local_only': 'CE + 3-Pole Triplet (Local) Only',
     '3pole_global_only': 'CE + 3-Pole Triplet (Global) Only',
+    '3pole_local_only_margin0.0': 'CE + 3-Pole Triplet (Local) Only (Margin 0.0)',
+    '3pole_global_only_margin0.0': 'CE + 3-Pole Triplet (Global) Only (Margin 0.0)',
 }
 
 # Paper-matching row labels for Table IV

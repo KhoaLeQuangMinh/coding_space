@@ -16,7 +16,12 @@ def extract_text_from_pdf(pdf_path):
 
 def parse_matrices(text):
     # results[variant][model][size][fold] = matrix
-    results = {'CE': {}, 'FULL': {}, 'TRIPLET_ONLY': {}, 'EXP_3POLE_LOCAL': {}, 'EXP_3POLE_GLOBAL': {}, '3POLE_LOCAL_ONLY': {}, '3POLE_GLOBAL_ONLY': {}}
+    results = {
+        'CE': {}, 'FULL': {}, 'TRIPLET_ONLY': {}, 
+        'EXP_3POLE_LOCAL': {}, 'EXP_3POLE_GLOBAL': {}, 
+        '3POLE_LOCAL_ONLY': {}, '3POLE_GLOBAL_ONLY': {},
+        '3POLE_LOCAL_ONLY_MARGIN0.0': {}, '3POLE_GLOBAL_ONLY_MARGIN0.0': {}
+    }
     for v in results:
         for m in ['best_2c_net', 'best_3c_net', 'best_4c_net']:
             results[v][m] = {'3c': {}, '4c': {}}
@@ -68,7 +73,9 @@ def parse_txt_logs(results):
         ('EXP_3POLE_LOCAL', 'ablation_loss_exp_3pole_local'), 
         ('EXP_3POLE_GLOBAL', 'ablation_loss_exp_3pole_global'),
         ('3POLE_LOCAL_ONLY', 'ablation_loss_3pole_local_only'),
-        ('3POLE_GLOBAL_ONLY', 'ablation_loss_3pole_global_only')
+        ('3POLE_GLOBAL_ONLY', 'ablation_loss_3pole_global_only'),
+        ('3POLE_LOCAL_ONLY_MARGIN0.0', 'ablation_loss_3pole_local_only_margin0.0'),
+        ('3POLE_GLOBAL_ONLY_MARGIN0.0', 'ablation_loss_3pole_global_only_margin0.0')
     ]:
         for model in ['best_2c_net', 'best_3c_net', 'best_4c_net']:
             net_short = model.split('_')[1] # '2c', '3c', '4c'
@@ -114,7 +121,9 @@ def compute_2c_from_csvs(results):
         'EXP_3POLE_LOCAL': 'exp_3pole_local', 
         'EXP_3POLE_GLOBAL': 'exp_3pole_global',
         '3POLE_LOCAL_ONLY': '3pole_local_only',
-        '3POLE_GLOBAL_ONLY': '3pole_global_only'
+        '3POLE_GLOBAL_ONLY': '3pole_global_only',
+        '3POLE_LOCAL_ONLY_MARGIN0.0': '3pole_local_only_margin0.0',
+        '3POLE_GLOBAL_ONLY_MARGIN0.0': '3pole_global_only_margin0.0'
     }
     networks = ['best_2c_net', 'best_3c_net', 'best_4c_net']
     folds = [1, 2, 3, 4, 5]
@@ -158,7 +167,9 @@ def plot_confusion_matrices(results, out_dir):
         'EXP_3POLE_LOCAL': '3-Pole Triplet (Local)',
         'EXP_3POLE_GLOBAL': '3-Pole Triplet (Global)',
         '3POLE_LOCAL_ONLY': '3-Pole Local Only',
-        '3POLE_GLOBAL_ONLY': '3-Pole Global Only'
+        '3POLE_GLOBAL_ONLY': '3-Pole Global Only',
+        '3POLE_LOCAL_ONLY_MARGIN0.0': '3-Pole Local Only (Margin 0.0)',
+        '3POLE_GLOBAL_ONLY_MARGIN0.0': '3-Pole Global Only (Margin 0.0)'
     }
     
     networks = ['best_2c_net', 'best_3c_net', 'best_4c_net']
@@ -166,7 +177,7 @@ def plot_confusion_matrices(results, out_dir):
     
     for net in networks:
         for size in ['2c', '3c', '4c']:
-            fig, axes = plt.subplots(7, 6, figsize=(32, 38))
+            fig, axes = plt.subplots(9, 6, figsize=(32, 48))
             if size == '2c':
                 title_size = '2-Class (sMCI vs pMCI)'
                 labels = ['sMCI', 'pMCI']
@@ -182,7 +193,11 @@ def plot_confusion_matrices(results, out_dir):
                 
             fig.suptitle(f'{title_size} Confusion Matrices across Folds - {net}', fontsize=24)
             
-            for r, variant in enumerate(['CE', 'FULL', 'TRIPLET_ONLY', 'EXP_3POLE_LOCAL', 'EXP_3POLE_GLOBAL', '3POLE_LOCAL_ONLY', '3POLE_GLOBAL_ONLY']):
+            for r, variant in enumerate([
+                'CE', 'FULL', 'TRIPLET_ONLY', 'EXP_3POLE_LOCAL', 'EXP_3POLE_GLOBAL', 
+                '3POLE_LOCAL_ONLY', '3POLE_GLOBAL_ONLY', 
+                '3POLE_LOCAL_ONLY_MARGIN0.0', '3POLE_GLOBAL_ONLY_MARGIN0.0'
+            ]):
                 var_dict = results[variant][net][size]
                 
                 # Calculate aggregated matrix
@@ -207,7 +222,7 @@ def plot_confusion_matrices(results, out_dir):
                         ax.set_title(col_title, fontsize=16)
                         if c == 0:
                             ax.set_ylabel('True Label', fontsize=14)
-                        if r == 6:
+                        if r == 8:
                             ax.set_xlabel('Predicted Label', fontsize=14)
                     else:
                         ax.set_title(f"{col_title}\n(Data Missing)", fontsize=16)

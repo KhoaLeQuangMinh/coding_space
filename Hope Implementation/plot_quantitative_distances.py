@@ -18,6 +18,9 @@ def plot_quantitative_distances():
         'exclude_ins2cls': 'Exclude Ins2Cls',
         'exp_triplet_ins2cls': 'Triplet Ins2Cls (Poles)',
         'triplet_only': 'CE + Triplet Only',
+        'triplet_only_margin0.3': 'CE + Triplet Only (Margin 0.3)',
+        'triplet_only_margin3.0': 'CE + Triplet Only (Margin 3.0)',
+        'triplet_only_ema0.5_margin0.0': 'CE + Triplet Only (EMA 0.5, Margin 0.0)',
         'hierarchical_triplet_only': 'CE + Hierarchical Triplet',
         'exp_hierarchical_triplet_ins2cls': 'Hierarchical Triplet Ins2Cls',
         'full_4class': 'HOPE 4-Class (No EMA)',
@@ -26,8 +29,10 @@ def plot_quantitative_distances():
         'qwk_hierarchical_triplet_4class': 'QWK Hierarchical Triplet 4c',
         'exp_3pole_local': '3-Pole Triplet (Local)',
         'exp_3pole_global': '3-Pole Triplet (Global)',
-        '3pole_local_only': '3-Pole (Local) Only',
-        '3pole_global_only': '3-Pole (Global) Only'
+        '3pole_local_only': '3-Pole (Local) Only (Margin 0.3)',
+        '3pole_global_only': '3-Pole (Global) Only (Margin 0.3)',
+        '3pole_local_only_margin0.0': '3-Pole (Local) Only (Margin 0.0)',
+        '3pole_global_only_margin0.0': '3-Pole (Global) Only (Margin 0.0)'
     }
 
     features_cols = [f'feature_{i}' for i in range(128)]
@@ -40,9 +45,9 @@ def plot_quantitative_distances():
     comp_dir = os.path.join(out_dir, 'comparative')
     os.makedirs(comp_dir, exist_ok=True)
 
-    fig, axes = plt.subplots(3, 6, figsize=(28, 14))
+    fig, axes = plt.subplots(4, 6, figsize=(30, 20))
     axes_flat = axes.flatten()
-    fig.suptitle('Quantitative Euclidean Distance to AD Prototype for All 18 Loss Variants (best_2c_net)', fontsize=20, y=0.98, fontweight='bold')
+    fig.suptitle('Quantitative Euclidean Distance to AD Prototype for All 23 Loss Variants (best_2c_net)', fontsize=20, y=0.98, fontweight='bold')
 
     for idx, (var_key, var_name) in enumerate(variants.items()):
         ax = axes_flat[idx]

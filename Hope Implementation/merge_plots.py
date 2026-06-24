@@ -26,7 +26,9 @@ VARIANTS_TO_PLOT = [
     'exp_3pole_local',
     'exp_3pole_global',
     '3pole_local_only',
-    '3pole_global_only'
+    '3pole_global_only',
+    '3pole_local_only_margin0.0',
+    '3pole_global_only_margin0.0'
 ]
 
 CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']

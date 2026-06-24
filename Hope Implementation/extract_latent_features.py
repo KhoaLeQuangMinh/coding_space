@@ -29,6 +29,7 @@ def main():
     parser.add_argument('--num_classes', type=int, required=True, help='Number of classes for classification (e.g., 3 or 4)')
     parser.add_argument('--target_loss', type=str, required=True, help='Specific loss variant to run (e.g., ce, full, exp_triplet_ins2cls)')
     parser.add_argument('--triplet_margin', type=float, default=0.3, help='Margin for triplet relative losses')
+    parser.add_argument('--m', type=float, default=0.9, help='EMA momentum')
     opt = parser.parse_args()
 
     os.makedirs(opt.out_dir, exist_ok=True)
@@ -38,6 +39,7 @@ def main():
     variant = opt.target_loss
     class_num = opt.num_classes
     name_suffix = "_4class" if class_num == 4 else ""
+    ema_suffix = f"_ema{opt.m}" if opt.m != 0.9 else ""
     margin_suffix = f"_margin{opt.triplet_margin}" if opt.triplet_margin != 0.3 else ""
     prefix = "ablation_loss"
     
@@ -53,7 +55,7 @@ def main():
         loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
         
         for ckpt_name in CHECKPOINTS:
-            ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}{name_suffix}{margin_suffix}_fold{fold}", ckpt_name)
+            ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}{name_suffix}{ema_suffix}{margin_suffix}_fold{fold}", ckpt_name)
             
             if not os.path.exists(ckpt_path):
                 print(f"Skipping {ckpt_name} (Not found: {ckpt_path})")
@@ -100,7 +102,7 @@ def main():
                 df_data[f'feature_{i}'] = fold_features_np[:, i]
                 
             df = pd.DataFrame(df_data)
-            csv_name = f"{variant}{name_suffix}{margin_suffix}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
+            csv_name = f"{variant}{name_suffix}{ema_suffix}{margin_suffix}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
             df.to_csv(os.path.join(opt.out_dir, csv_name), index=False)
             print(f"  -> Saved {csv_name}")
 

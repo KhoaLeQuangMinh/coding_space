@@ -30,6 +30,8 @@ VARIANTS_TO_PLOT = [
     'exp_3pole_global',
     '3pole_local_only',
     '3pole_global_only',
+    '3pole_local_only_margin0.0',
+    '3pole_global_only_margin0.0',
     'hierarchical_triplet_only_4class'
 ]
 

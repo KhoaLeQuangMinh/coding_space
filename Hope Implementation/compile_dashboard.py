@@ -42,10 +42,11 @@ subdirs = {
 # Loss variants lists & labels
 LOSS_VARIANTS = [
     'ce', 'ins2ins', 'ins2cls', 'full', 'exclude_ins2ins', 'exclude_ins2cls',
-    'exp_triplet_ins2cls', 'triplet_only', 'hierarchical_triplet_only',
+    'exp_triplet_ins2cls', 'triplet_only', 'triplet_only_margin0.3', 'triplet_only_margin3.0', 'triplet_only_ema0.5_margin0.0', 'hierarchical_triplet_only',
     'exp_hierarchical_triplet_ins2cls', 'full_4class', 'exp_triplet_ins2cls_4class',
     'hierarchical_triplet_only_4class', 'qwk_hierarchical_triplet_4class',
-    'exp_3pole_local', 'exp_3pole_global', '3pole_local_only', '3pole_global_only'
+    'exp_3pole_local', 'exp_3pole_global', '3pole_local_only', '3pole_global_only',
+    '3pole_local_only_margin0.0', '3pole_global_only_margin0.0'
 ]
 
 LOSS_LABELS = {
@@ -57,6 +58,9 @@ LOSS_LABELS = {
     'exclude_ins2cls': 'L_CE + L_Ins2Ins + L_Cls2Cls (Exclude Ins2Cls)',
     'exp_triplet_ins2cls': 'L_CE + L_Ins2Ins + L_Triplet + L_Cls2Cls',
     'triplet_only': 'L_CE + L_Triplet',
+    'triplet_only_margin0.3': 'L_CE + L_Triplet (Margin 0.3)',
+    'triplet_only_margin3.0': 'L_CE + L_Triplet (Margin 3.0)',
+    'triplet_only_ema0.5_margin0.0': 'L_CE + L_Triplet (EMA 0.5, Margin 0.0)',
     'hierarchical_triplet_only': 'L_CE + L_Hierarchical_Triplet',
     'exp_hierarchical_triplet_ins2cls': 'L_CE + L_Ins2Ins + L_Hierarchical_Triplet + L_Cls2Cls',
     'full_4class': 'L_CE + L_Ins2Ins + L_Ins2Cls + L_Cls2Cls (4-Class)',
@@ -65,8 +69,10 @@ LOSS_LABELS = {
     'qwk_hierarchical_triplet_4class': 'L_QWK + L_Hierarchical_Triplet (4-Class)',
     'exp_3pole_local': 'L_CE + L_Ins2Ins + L_3Pole_Triplet (Local) + L_Cls2Cls',
     'exp_3pole_global': 'L_CE + L_Ins2Ins + L_3Pole_Triplet (Global) + L_Cls2Cls',
-    '3pole_local_only': 'L_CE + L_3Pole_Triplet (Local) Only',
-    '3pole_global_only': 'L_CE + L_3Pole_Triplet (Global) Only'
+    '3pole_local_only': 'L_CE + L_3Pole_Triplet (Local) Only (Margin 0.3)',
+    '3pole_global_only': 'L_CE + L_3Pole_Triplet (Global) Only (Margin 0.3)',
+    '3pole_local_only_margin0.0': 'L_CE + L_3Pole_Triplet (Local) Only (Margin 0.0)',
+    '3pole_global_only_margin0.0': 'L_CE + L_3Pole_Triplet (Global) Only (Margin 0.0)'
 }
 
 CHECKPOINTS = ['best_2c_net', 'best_3c_net', 'best_4c_net']
@@ -256,6 +262,9 @@ def parse_metrics_csv(csv_path, target_key):
         'excludeins2clsablation': 'exclude_ins2cls',
         'tripletins2clspoles': 'exp_triplet_ins2cls',
         'cetripletonly': 'triplet_only',
+        'cetripletonlymargin0.3': 'triplet_only_margin0.3',
+        'cetripletonlymargin3.0': 'triplet_only_margin3.0',
+        'cetripletonlyema0.5margin0.0': 'triplet_only_ema0.5_margin0.0',
         'cehierarchicaltripletonly': 'hierarchical_triplet_only',
         'hierarchicaltripletins2cls': 'exp_hierarchical_triplet_ins2cls',
         'hope4classnoema': 'full_4class',
@@ -265,7 +274,9 @@ def parse_metrics_csv(csv_path, target_key):
         '3poletripletlocal': 'exp_3pole_local',
         '3poletripletglobal': 'exp_3pole_global',
         'ce3poletripletlocalonly': '3pole_local_only',
-        'ce3poletripletglobalonly': '3pole_global_only'
+        'ce3poletripletglobalonly': '3pole_global_only',
+        'ce3poletripletlocalonlymargin0.0': '3pole_local_only_margin0.0',
+        'ce3poletripletglobalonlymargin0.0': '3pole_global_only_margin0.0'
     }
 
     for _, row in df.iterrows():
@@ -1080,8 +1091,10 @@ html_template = """<!DOCTYPE html>
                 
                 const exps = [
                     { key: "CE + Triplets only", label: "CE + Triplets only (Standard Triplet Loss)" },
-                    { key: "CE + 3 poles triplets only local", label: "CE + 3-Pole Triplets Local" },
-                    { key: "CE + 3 poles triplets only global", label: "CE + 3-Pole Triplets Global" },
+                    { key: "CE + 3 poles triplets only local", label: "CE + 3-Pole Triplets Local (Margin 0.3)" },
+                    { key: "CE + 3 poles triplets only local no margin", label: "CE + 3-Pole Triplets Local (Margin 0.0)" },
+                    { key: "CE + 3 poles triplets only global", label: "CE + 3-Pole Triplets Global (Margin 0.3)" },
+                    { key: "CE + 3 poles only global no margin", label: "CE + 3-Pole Triplets Global (Margin 0.0)" },
                     { key: "CE + 3 poles Triplets + Local EMA", label: "CE + 3-Pole Triplets + Local EMA (Rank/Ins2Ins/Cls2Cls)" },
                     { key: "CE + 3 poles Triplets + Global EMA ", label: "CE + 3-Pole Triplets + Global EMA (Rank/Ins2Ins/Cls2Cls)" }
                 ];

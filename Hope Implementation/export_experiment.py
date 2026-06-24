@@ -81,6 +81,53 @@ def main():
                         print(f"  + {arcname}")
 
         # 2. Prototype JSON files
+        # Dynamically extract prototypes for this variant if they are not already written to JSON
+        proto_json_name = f"{variant_file_prefix}_prototypes.json"
+        proto_json_path = os.path.join(args.out_dir, proto_json_name)
+        
+        # Check if the file is already there, otherwise extract it
+        if not os.path.exists(proto_json_path):
+            print(f"Prototype JSON not found. Running dynamic prototype extraction for {experiment_name}...")
+            try:
+                import torch
+                import json
+                import numpy as np
+                
+                extracted_protos = {}
+                for fold in range(1, args.kfold + 1):
+                    fold_dir = os.path.join(args.checkpoints_dir, f"{experiment_name}_fold{fold}")
+                    if os.path.isdir(fold_dir):
+                        for ckpt_path in glob.glob(os.path.join(fold_dir, "*.pth")):
+                            try:
+                                checkpoint = torch.load(ckpt_path, map_location='cpu')
+                                prototypes = None
+                                if 'prototypes' in checkpoint:
+                                    prototypes = checkpoint['prototypes']
+                                elif 'state_dict' in checkpoint and 'prototypes' in checkpoint['state_dict']:
+                                    prototypes = checkpoint['state_dict']['prototypes']
+                                    
+                                if prototypes is not None:
+                                    if isinstance(prototypes, torch.Tensor):
+                                        proto_list = prototypes.detach().numpy().tolist()
+                                    else:
+                                        proto_list = np.array(prototypes).tolist()
+                                        
+                                    rel_key = f"{experiment_name}_fold{fold}/{os.path.basename(ckpt_path)}"
+                                    extracted_protos[rel_key] = proto_list
+                            except Exception as ex:
+                                print(f"    [!] Failed to extract prototypes from {os.path.basename(ckpt_path)}: {ex}")
+                
+                if extracted_protos:
+                    with open(proto_json_path, 'w') as out_f:
+                        json.dump(extracted_protos, out_f, indent=2)
+                    print(f"  [✓] Generated prototype JSON: {proto_json_path}")
+                else:
+                    print("  [!] No prototypes found in any checkpoint files.")
+            except ImportError:
+                print("  [!] torch or numpy not installed. Skipping dynamic prototype extraction.")
+            except Exception as e:
+                print(f"  [!] Failed to dynamically extract prototypes: {e}")
+
         # Search in checkpoints fold dirs and analysis output for matching JSONs
         for fold in range(1, args.kfold + 1):
             fold_dir = os.path.join(args.checkpoints_dir, f"{experiment_name}_fold{fold}")
@@ -105,13 +152,43 @@ def main():
                     files_added += 1
                     print(f"  + {arcname}")
 
-        # 3. Test logs (PDFs from checkpoint fold dirs)
+        # 3. Checkpoints fold directories: metrics CSVs, text logs, and PDFs
         for fold in range(1, args.kfold + 1):
             fold_dir = os.path.join(args.checkpoints_dir, f"{experiment_name}_fold{fold}")
             if os.path.isdir(fold_dir):
+                # Package test_metrics_best_*.csv
+                for csv_file in glob.glob(os.path.join(fold_dir, "test_metrics_best_*.csv")):
+                    arcname = f"checkpoints/{experiment_name}_fold{fold}/{os.path.basename(csv_file)}"
+                    zf.write(csv_file, arcname)
+                    files_added += 1
+                    print(f"  + {arcname}")
+                # Package *test_log_best_*.txt
+                for txt_file in glob.glob(os.path.join(fold_dir, "*test_log_best_*.txt")):
+                    arcname = f"checkpoints/{experiment_name}_fold{fold}/{os.path.basename(txt_file)}"
+                    zf.write(txt_file, arcname)
+                    files_added += 1
+                    print(f"  + {arcname}")
+                # Package PDFs
+                for pdf_file in glob.glob(os.path.join(fold_dir, "*.pdf")):
+                    arcname = f"checkpoints/{experiment_name}_fold{fold}/{os.path.basename(pdf_file)}"
+                    zf.write(pdf_file, arcname)
+                    files_added += 1
+                    print(f"  + {arcname}")
+                
+                # Backwards compatibility: copy PDFs to test_logs/
                 for pdf_file in glob.glob(os.path.join(fold_dir, "*.pdf")):
                     arcname = f"test_logs/{experiment_name}_fold{fold}/{os.path.basename(pdf_file)}"
                     zf.write(pdf_file, arcname)
+                    files_added += 1
+                    print(f"  + {arcname}")
+
+        # 4. Root checkpoints directory: aggregated metrics, test logs, confusion matrix PNGs
+        root_dir = os.path.join(args.checkpoints_dir, experiment_name)
+        if os.path.isdir(root_dir):
+            for file_pattern in ["test_metrics_best_*.csv", "*test_log_best_*.txt", "*.png", "*.pdf"]:
+                for file_path in glob.glob(os.path.join(root_dir, file_pattern)):
+                    arcname = f"checkpoints/{experiment_name}/{os.path.basename(file_path)}"
+                    zf.write(file_path, arcname)
                     files_added += 1
                     print(f"  + {arcname}")
 

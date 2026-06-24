@@ -1,3 +1,0 @@
-Variant,Training Labels,Model,N_Folds,ACC,QWK,AUC,F1-score,Precision,Recall
-V1 (NC/MCI/AD),NC/MCI/AD,best_3c_net,5,56.3 ± 4.8,N/A,73.6 ± 5.9,56.7 ± 4.9,59.6 ± 6.1,56.3 ± 4.8
-V2 (NC/sMCI/pMCI/AD),NC/sMCI/pMCI/AD,best_4c_net,5,46.7 ± 3.1,N/A,72.0 ± 5.5,43.5 ± 7.4,48.8 ± 14.4,46.7 ± 3.1

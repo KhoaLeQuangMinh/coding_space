@@ -2,16 +2,26 @@ import os
 import subprocess
 import argparse
 import sys
+from utils.config_loader import load_config, get_variant_params
 
 def main():
     parser = argparse.ArgumentParser(description="Run HOPE EMA Ablation Study (Table IV)")
     parser.add_argument('--kfold', type=int, default=5, help='Number of folds')
     parser.add_argument('--specific_fold', type=int, default=-1, help='Distributed execution: run only this specific fold (1-based)')
     parser.add_argument('--data_dir', type=str, default='/kaggle/input/datasets/kisokoghan/paired-npz/paired_npz', help='Path to NPZ data')
+    parser.add_argument('--variant', type=str, default=None, help='Variant key from pipeline_config.json (runs only that EMA variant)')
+    parser.add_argument('--config', type=str, default=None, help='Path to pipeline_config.json')
     args = parser.parse_args()
 
     # Table IV EMA Momentums: None (represented mathematically as 1.0), 0.5, 0.8, 0.9, 0.99, 0.999
     ema_variants = [1.0, 0.5, 0.8, 0.9, 0.99, 0.999]
+
+    # If --variant is provided, run only that specific EMA variant
+    if args.variant is not None:
+        config = load_config(args.config)
+        params = get_variant_params(args.variant, config)
+        m_value = params.get('m', 0.9)
+        ema_variants = [m_value]
     
     print(f"Starting EMA Ablation Study (Table IV)")
     print(f"K-Fold Split: {args.kfold}")

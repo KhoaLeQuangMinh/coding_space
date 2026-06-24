@@ -1,0 +1,226 @@
+{
+  "variants": {
+    "ce": {
+      "display_name": "L_CE",
+      "loss_type": "ce",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "ins2ins": {
+      "display_name": "L_CE + L_Ins2Ins",
+      "loss_type": "ins2ins",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "ins2cls": {
+      "display_name": "L_CE + L_Ins2Ins + L_Ins2Cls",
+      "loss_type": "ins2cls",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "full": {
+      "display_name": "L_CE + L_Ins2Ins + L_Ins2Cls + L_Cls2Cls (HOPE)",
+      "loss_type": "full",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "exclude_ins2ins": {
+      "display_name": "Exclude Ins2Ins Ablation",
+      "loss_type": "exclude_ins2ins",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "exclude_ins2cls": {
+      "display_name": "Exclude Ins2Cls Ablation",
+      "loss_type": "exclude_ins2cls",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "exp_triplet_ins2cls": {
+      "display_name": "Triplet Ins2Cls (Poles)",
+      "loss_type": "exp_triplet_ins2cls",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "triplet_only": {
+      "display_name": "CE + Triplet Only",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "triplet_only_margin0.3": {
+      "display_name": "CE + Triplet Only (Margin 0.3)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "triplet_only_margin3.0": {
+      "display_name": "CE + Triplet Only (Margin 3.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 3.0,
+      "m": 0.9
+    },
+    "triplet_only_ema0.5_margin0.0": {
+      "display_name": "CE + Triplet Only (EMA 0.5, Margin 0.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.5
+    },
+    "hierarchical_triplet_only": {
+      "display_name": "CE + Hierarchical Triplet Only",
+      "loss_type": "hierarchical_triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "exp_hierarchical_triplet_ins2cls": {
+      "display_name": "Hierarchical Triplet Ins2Cls",
+      "loss_type": "exp_hierarchical_triplet_ins2cls",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "full_4class": {
+      "display_name": "HOPE 4-Class (No EMA)",
+      "loss_type": "full",
+      "num_classes": 4,
+      "triplet_margin": 0.3,
+      "m": 1.0
+    },
+    "exp_triplet_ins2cls_4class": {
+      "display_name": "Triplet Ins2Cls 4-Class",
+      "loss_type": "exp_triplet_ins2cls",
+      "num_classes": 4,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "hierarchical_triplet_only_4class": {
+      "display_name": "Hierarchical Triplet 4-Class",
+      "loss_type": "hierarchical_triplet_only",
+      "num_classes": 4,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "qwk_hierarchical_triplet_4class": {
+      "display_name": "QWK Hierarchical Triplet 4-Class",
+      "loss_type": "qwk_hierarchical_triplet",
+      "num_classes": 4,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "exp_3pole_local": {
+      "display_name": "3-Pole Triplet (Local)",
+      "loss_type": "exp_3pole_local",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "exp_3pole_global": {
+      "display_name": "3-Pole Triplet (Global)",
+      "loss_type": "exp_3pole_global",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "3pole_local_only": {
+      "display_name": "CE + 3-Pole Triplet (Local) Only",
+      "loss_type": "3pole_local_only",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "3pole_global_only": {
+      "display_name": "CE + 3-Pole Triplet (Global) Only",
+      "loss_type": "3pole_global_only",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "3pole_local_only_margin0.0": {
+      "display_name": "CE + 3-Pole Triplet (Local) Only (Margin 0.0)",
+      "loss_type": "3pole_local_only",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.9
+    },
+    "3pole_global_only_margin0.0": {
+      "display_name": "CE + 3-Pole Triplet (Global) Only (Margin 0.0)",
+      "loss_type": "3pole_global_only",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.9
+    },
+    "ema_None": {
+      "display_name": "No EMA (σ = 0)",
+      "loss_type": "full",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 1.0
+    },
+    "ema_0.5": {
+      "display_name": "EMA σ = 0.5",
+      "loss_type": "full",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.5
+    },
+    "ema_0.8": {
+      "display_name": "EMA σ = 0.8",
+      "loss_type": "full",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.8
+    },
+    "ema_0.9": {
+      "display_name": "EMA σ = 0.9 ★",
+      "loss_type": "full",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "ema_0.99": {
+      "display_name": "EMA σ = 0.99",
+      "loss_type": "full",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.99
+    },
+    "ema_0.999": {
+      "display_name": "EMA σ = 0.999",
+      "loss_type": "full",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.999
+    },
+    "triplet_only_margin5": {
+      "display_name": "Triplet Only (Margin 5.0)",
+      "loss_type": "full",
+      "num_classes": 3,
+      "triplet_margin": 5.0,
+      "m": 0.9
+    }
+  },
+  "checkpoints": [
+    "best_2c_net",
+    "best_3c_net",
+    "best_4c_net"
+  ],
+  "folds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ]
+}

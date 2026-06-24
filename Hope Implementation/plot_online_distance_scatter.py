@@ -96,7 +96,14 @@ def main():
                 continue
 
             variant, fold, model_name = parsed
-            csv_path = os.path.join(args.csv_dir, f"{variant}_{model_name}_fold{fold}.csv")
+            
+            # Normalise margin_X.X to marginX.X to match the CSV filename format
+            variant_normalized = variant.replace("margin_", "margin") if "margin_" in variant else variant
+            
+            csv_path = os.path.join(args.csv_dir, f"{variant_normalized}_{model_name}_fold{fold}.csv")
+            if not os.path.exists(csv_path):
+                # Fallback to the raw variant name
+                csv_path = os.path.join(args.csv_dir, f"{variant}_{model_name}_fold{fold}.csv")
 
             if not os.path.exists(csv_path):
                 print(f"  [Warning] Missing CSV for fold {fold}: {csv_path}")

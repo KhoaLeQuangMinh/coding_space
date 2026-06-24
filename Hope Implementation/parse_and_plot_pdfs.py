@@ -18,6 +18,8 @@ def parse_matrices(text):
     # results[variant][model][size][fold] = matrix
     results = {
         'CE': {}, 'FULL': {}, 'TRIPLET_ONLY': {}, 
+        'TRIPLET_ONLY_MARGIN0.3': {}, 'TRIPLET_ONLY_MARGIN3.0': {},
+        'TRIPLET_ONLY_EMA0.5_MARGIN0.0': {},
         'EXP_3POLE_LOCAL': {}, 'EXP_3POLE_GLOBAL': {}, 
         '3POLE_LOCAL_ONLY': {}, '3POLE_GLOBAL_ONLY': {},
         '3POLE_LOCAL_ONLY_MARGIN0.0': {}, '3POLE_GLOBAL_ONLY_MARGIN0.0': {}
@@ -68,8 +70,12 @@ def parse_matrices(text):
     return results
 
 def parse_txt_logs(results):
+    import glob
     log_dir = '/Users/khoale/Downloads/ablation_result/working/coding_space/Hope Implementation/checkpoints'
     for v_display, v_folder in [
+        ('TRIPLET_ONLY_MARGIN0.3', 'ablation_loss_triplet_only_margin0.3'),
+        ('TRIPLET_ONLY_MARGIN3.0', 'ablation_loss_triplet_only_margin3.0'),
+        ('TRIPLET_ONLY_EMA0.5_MARGIN0.0', 'ablation_loss_triplet_only_ema0.5_margin0.0'),
         ('EXP_3POLE_LOCAL', 'ablation_loss_exp_3pole_local'), 
         ('EXP_3POLE_GLOBAL', 'ablation_loss_exp_3pole_global'),
         ('3POLE_LOCAL_ONLY', 'ablation_loss_3pole_local_only'),
@@ -80,9 +86,11 @@ def parse_txt_logs(results):
         for model in ['best_2c_net', 'best_3c_net', 'best_4c_net']:
             net_short = model.split('_')[1] # '2c', '3c', '4c'
             for fold in [1, 2, 3, 4, 5]:
-                log_path = os.path.join(log_dir, f"{v_folder}_fold{fold}", f"{v_folder}_test_log_best_{net_short}.txt")
-                if not os.path.exists(log_path):
+                search_path = os.path.join(log_dir, f"{v_folder}_fold{fold}", f"*test_log_best_{net_short}.txt")
+                matches = glob.glob(search_path)
+                if not matches:
                     continue
+                log_path = matches[0]
                 
                 with open(log_path, 'r') as f:
                     text = f.read()
@@ -118,6 +126,9 @@ def compute_2c_from_csvs(results):
         'CE': 'ce', 
         'FULL': 'full', 
         'TRIPLET_ONLY': 'triplet_only', 
+        'TRIPLET_ONLY_MARGIN0.3': 'triplet_only_margin0.3',
+        'TRIPLET_ONLY_MARGIN3.0': 'triplet_only_margin3.0',
+        'TRIPLET_ONLY_EMA0.5_MARGIN0.0': 'triplet_only_ema0.5_margin0.0',
         'EXP_3POLE_LOCAL': 'exp_3pole_local', 
         'EXP_3POLE_GLOBAL': 'exp_3pole_global',
         '3POLE_LOCAL_ONLY': '3pole_local_only',
@@ -164,6 +175,9 @@ def plot_confusion_matrices(results, out_dir):
         'CE': 'CE (Baseline)',
         'FULL': 'HOPE (Full)',
         'TRIPLET_ONLY': 'Proposed (Triplet Only)',
+        'TRIPLET_ONLY_MARGIN0.3': 'Triplet Only (Margin 0.3)',
+        'TRIPLET_ONLY_MARGIN3.0': 'Triplet Only (Margin 3.0)',
+        'TRIPLET_ONLY_EMA0.5_MARGIN0.0': 'Triplet Only (EMA 0.5, Margin 0.0)',
         'EXP_3POLE_LOCAL': '3-Pole Triplet (Local)',
         'EXP_3POLE_GLOBAL': '3-Pole Triplet (Global)',
         '3POLE_LOCAL_ONLY': '3-Pole Local Only',
@@ -177,7 +191,7 @@ def plot_confusion_matrices(results, out_dir):
     
     for net in networks:
         for size in ['2c', '3c', '4c']:
-            fig, axes = plt.subplots(9, 6, figsize=(32, 48))
+            fig, axes = plt.subplots(12, 6, figsize=(32, 64))
             if size == '2c':
                 title_size = '2-Class (sMCI vs pMCI)'
                 labels = ['sMCI', 'pMCI']
@@ -194,7 +208,8 @@ def plot_confusion_matrices(results, out_dir):
             fig.suptitle(f'{title_size} Confusion Matrices across Folds - {net}', fontsize=24)
             
             for r, variant in enumerate([
-                'CE', 'FULL', 'TRIPLET_ONLY', 'EXP_3POLE_LOCAL', 'EXP_3POLE_GLOBAL', 
+                'CE', 'FULL', 'TRIPLET_ONLY', 'TRIPLET_ONLY_MARGIN0.3', 'TRIPLET_ONLY_MARGIN3.0',
+                'TRIPLET_ONLY_EMA0.5_MARGIN0.0', 'EXP_3POLE_LOCAL', 'EXP_3POLE_GLOBAL', 
                 '3POLE_LOCAL_ONLY', '3POLE_GLOBAL_ONLY', 
                 '3POLE_LOCAL_ONLY_MARGIN0.0', '3POLE_GLOBAL_ONLY_MARGIN0.0'
             ]):
@@ -222,7 +237,7 @@ def plot_confusion_matrices(results, out_dir):
                         ax.set_title(col_title, fontsize=16)
                         if c == 0:
                             ax.set_ylabel('True Label', fontsize=14)
-                        if r == 8:
+                        if r == 11:
                             ax.set_xlabel('Predicted Label', fontsize=14)
                     else:
                         ax.set_title(f"{col_title}\n(Data Missing)", fontsize=16)

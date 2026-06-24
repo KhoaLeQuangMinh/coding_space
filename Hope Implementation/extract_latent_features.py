@@ -7,6 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 from utils.Dataset import Dataset
 from models.Resnet import resnet18
+from utils.config_loader import load_config, get_variant_params
 
 def compute_1d_severity(features, proto_CN, proto_AD):
     feat_norm = F.normalize(features, p=2, dim=1)
@@ -26,11 +27,27 @@ def main():
     parser.add_argument('--out_dir', type=str, default='./analysis_output/extracted_features', help='where to save CSVs')
     parser.add_argument('--kfold', type=int, default=5, help='Number of folds used during training')
     parser.add_argument('--specific_fold', type=int, default=-1, help='Extract features for only this specific fold (1-based)')
-    parser.add_argument('--num_classes', type=int, required=True, help='Number of classes for classification (e.g., 3 or 4)')
-    parser.add_argument('--target_loss', type=str, required=True, help='Specific loss variant to run (e.g., ce, full, exp_triplet_ins2cls)')
+    parser.add_argument('--num_classes', type=int, default=None, help='Number of classes for classification (e.g., 3 or 4)')
+    parser.add_argument('--target_loss', type=str, default=None, help='Specific loss variant to run (e.g., ce, full, exp_triplet_ins2cls)')
     parser.add_argument('--triplet_margin', type=float, default=0.3, help='Margin for triplet relative losses')
     parser.add_argument('--m', type=float, default=0.9, help='EMA momentum')
+    parser.add_argument('--variant', type=str, default=None, help='Variant key from pipeline_config.json (overrides manual args)')
+    parser.add_argument('--config', type=str, default=None, help='Path to pipeline_config.json')
     opt = parser.parse_args()
+
+    # Resolve variant from config if provided
+    if opt.variant is not None:
+        config = load_config(opt.config)
+        params = get_variant_params(opt.variant, config)
+        opt.target_loss = params.get('loss_type', params.get('target_loss', opt.target_loss))
+        opt.num_classes = params.get('num_classes', opt.num_classes)
+        opt.triplet_margin = params.get('triplet_margin', opt.triplet_margin)
+        opt.m = params.get('m', opt.m)
+
+    if opt.target_loss is None:
+        parser.error("--target_loss is required (or use --variant to load from config)")
+    if opt.num_classes is None:
+        parser.error("--num_classes is required (or use --variant to load from config)")
 
     os.makedirs(opt.out_dir, exist_ok=True)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

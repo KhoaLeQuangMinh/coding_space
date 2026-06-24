@@ -241,9 +241,9 @@ for v in LOSS_VARIANTS:
 print("Parsing performance metrics from CSV tables...")
 metrics_registry = {v: {'2c': {}, '3c': {}, '4c': {}} for v in LOSS_VARIANTS}
 
-csv_2c_path = os.path.join(base_dir, 'table3_loss_ablation_2class.csv')
-csv_3c_path = os.path.join(base_dir, 'extended_loss_ablation_3class.csv')
-csv_4c_path = os.path.join(base_dir, 'extended_loss_ablation_4class.csv')
+csv_2c_path = os.path.join(downloads_dir, 'ablation_result/table3_loss_ablation_2class.csv')
+csv_3c_path = os.path.join(downloads_dir, 'ablation_result/extended_loss_ablation_3class.csv')
+csv_4c_path = os.path.join(downloads_dir, 'ablation_result/extended_loss_ablation_4class.csv')
 
 def parse_metrics_csv(csv_path, target_key):
     if not os.path.exists(csv_path):
@@ -282,7 +282,7 @@ def parse_metrics_csv(csv_path, target_key):
     for _, row in df.iterrows():
         raw_var = str(row['Variant'])
         # Normalize: strip spaces, lowercase, remove +, -, _, (, ), and spaces
-        norm_var = raw_var.strip().replace(" ", "").replace("+", "").replace("-", "").replace("_", "").replace("(", "").replace(")", "").replace("★", "").lower()
+        norm_var = raw_var.strip().replace(" ", "").replace("+", "").replace("-", "").replace("_", "").replace("(", "").replace(")", "").replace("★", "").replace(",", "").lower()
         
         # Try to find match in norm_map
         v = norm_map.get(norm_var)

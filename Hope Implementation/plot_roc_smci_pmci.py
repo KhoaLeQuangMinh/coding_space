@@ -101,5 +101,5 @@ for var_key, var_name in variants.items():
     print(f"{var_name}: {auc_results[var_key]} -> Mean: {np.mean(auc_results[var_key]):.4f}")
 
 print("\n=== P-Values ===")
-print(f"Proposed vs CE Baseline: p = {p_ce:.5f}")
-print(f"Proposed vs HOPE (Full): p = {p_full:.5f}")
+print(f"Proposed (0.3) vs CE Baseline: p = {p_ce_03:.5f}")
+print(f"Proposed (0.3) vs HOPE (Full): p = {p_full_03:.5f}")

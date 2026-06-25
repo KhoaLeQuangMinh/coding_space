@@ -36,6 +36,7 @@ def main():
     opt = parser.parse_args()
 
     # Resolve variant from config if provided
+    no_classifier = False
     if opt.variant is not None:
         config = load_config(opt.config)
         params = get_variant_params(opt.variant, config)
@@ -43,6 +44,7 @@ def main():
         opt.num_classes = params.get('num_classes', opt.num_classes)
         opt.triplet_margin = params.get('triplet_margin', opt.triplet_margin)
         opt.m = params.get('m', opt.m)
+        no_classifier = params.get('no_classifier', False)
 
     if opt.target_loss is None:
         parser.error("--target_loss is required (or use --variant to load from config)")
@@ -58,6 +60,7 @@ def main():
     name_suffix = "_4class" if class_num == 4 else ""
     ema_suffix = f"_ema{opt.m}" if opt.m != 0.9 else ""
     margin_suffix = f"_margin{opt.triplet_margin}" if opt.triplet_margin != 0.3 else ""
+    proto_suffix = "_proto" if no_classifier else ""
     prefix = "ablation_loss"
     
     CHECKPOINTS = ['best_2c_net.pth', 'best_3c_net.pth', 'best_4c_net.pth']
@@ -72,7 +75,7 @@ def main():
         loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
         
         for ckpt_name in CHECKPOINTS:
-            ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}{name_suffix}{ema_suffix}{margin_suffix}_fold{fold}", ckpt_name)
+            ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}_fold{fold}", ckpt_name)
             
             if not os.path.exists(ckpt_path):
                 print(f"Skipping {ckpt_name} (Not found: {ckpt_path})")
@@ -80,7 +83,7 @@ def main():
             
             print(f"Extracting: {variant}{name_suffix} | {ckpt_name}")
             
-            model = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=0.99)
+            model = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=0.99, no_classifier=no_classifier)
             state_dict = torch.load(ckpt_path, map_location='cpu')
             model.load_state_dict(state_dict, strict=False)
             
@@ -119,7 +122,7 @@ def main():
                 df_data[f'feature_{i}'] = fold_features_np[:, i]
                 
             df = pd.DataFrame(df_data)
-            csv_name = f"{variant}{name_suffix}{ema_suffix}{margin_suffix}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
+            csv_name = f"{variant}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
             df.to_csv(os.path.join(opt.out_dir, csv_name), index=False)
             print(f"  -> Saved {csv_name}")
 

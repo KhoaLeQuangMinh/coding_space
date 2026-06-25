@@ -130,6 +130,20 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"Could not save test metrics csv: {e}")
         # Confusion Matrix for 4-class across all folds
+        # Confusion Matrix for 2-class across all folds (MCI only)
+        y_true_mci_all = []
+        y_pred_mci_all = []
+        for m in all_metrics:
+            y_true_mci_all.extend(m['y_true_mci'])
+            y_pred_mci_all.extend(m['y_pred_mci'])
+            
+        cm_2c = confusion_matrix(y_true_mci_all, y_pred_mci_all, labels=[0, 1])
+        print("\nCombined 2-Class Confusion Matrix (sMCI=0, pMCI=1):")
+        cm_2c_df = pd.DataFrame(cm_2c, index=['True sMCI', 'True pMCI'],
+                             columns=['Pred sMCI', 'Pred pMCI'])
+        print(cm_2c_df.to_markdown())
+
+        # Confusion Matrix for 4-class across all folds
         y_true_all = []
         y_pred_all = []
         for m in all_metrics:
@@ -164,6 +178,17 @@ if __name__ == '__main__':
                 expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
             os.makedirs(expr_dir, exist_ok=True)
             
+            # Plot 2-class
+            plt.figure(figsize=(6, 5))
+            sns.heatmap(cm_2c_df, annot=True, fmt='d', cmap='Oranges')
+            plt.title('Combined 2-Class Confusion Matrix')
+            plt.ylabel('True Label')
+            plt.xlabel('Predicted Label')
+            plt.tight_layout()
+            cm_path_2c = os.path.join(expr_dir, f"{opt.name}_confusion_matrix_2c_best_{opt.test_target}.png")
+            plt.savefig(cm_path_2c)
+            plt.close()
+
             # Plot 4-class
             plt.figure(figsize=(8, 6))
             sns.heatmap(cm_df, annot=True, fmt='d', cmap='Blues')
@@ -173,6 +198,7 @@ if __name__ == '__main__':
             plt.tight_layout()
             cm_path = os.path.join(expr_dir, f"{opt.name}_confusion_matrix_4c_best_{opt.test_target}.png")
             plt.savefig(cm_path)
+            plt.close()
             
             # Plot 3-class
             plt.figure(figsize=(8, 6))
@@ -183,6 +209,7 @@ if __name__ == '__main__':
             plt.tight_layout()
             cm_path_3c = os.path.join(expr_dir, f"{opt.name}_confusion_matrix_3c_best_{opt.test_target}.png")
             plt.savefig(cm_path_3c)
+            plt.close()
             
             print(f"\nSaved Confusion Matrix plots to {expr_dir}")
             
@@ -193,10 +220,12 @@ if __name__ == '__main__':
                 f.write("="*50 + "\n\n")
                 f.write("TESTING METRICS SUMMARY:\n")
                 f.write(df.to_markdown() + "\n\n")
-                f.write("COMBINED 4-CLASS CONFUSION MATRIX:\n")
-                f.write(cm_df.to_markdown() + "\n\n")
+                f.write("COMBINED 2-CLASS CONFUSION MATRIX:\n")
+                f.write(cm_2c_df.to_markdown() + "\n\n")
                 f.write("COMBINED 3-CLASS CONFUSION MATRIX:\n")
                 f.write(cm_3c_df.to_markdown() + "\n\n")
+                f.write("COMBINED 4-CLASS CONFUSION MATRIX:\n")
+                f.write(cm_df.to_markdown() + "\n\n")
                 
             print(f"\nSaved Test Log to {txt_path}")
         except Exception as e:

@@ -203,7 +203,7 @@
       "triplet_margin": 0.3,
       "m": 0.999
     },
-    "triplet_only_margin5": {
+    "triplet_only_margin5.0": {
       "display_name": "Triplet Only (Margin 5.0)",
       "loss_type": "triplet_only",
       "num_classes": 3,

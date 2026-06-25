@@ -40,14 +40,17 @@ def main():
         print(f"FOLD(S): {args.specific_fold if args.specific_fold != -1 else 'ALL'}")
         print(f"{'='*60}\n")
         
-        name_suffix = "_4class" if class_num == 4 else ""
-        ema_suffix = f"_ema{args.m}" if args.m != 0.9 else ""
-        margin_suffix = f"_margin{args.triplet_margin}" if args.triplet_margin != 0.3 else ""
-        proto_suffix = "_proto" if no_classifier else ""
-        
-        expr_name = f"ablation_loss_{loss_type}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}"
-        if loss_type == 'triplet_only_collinear':
-            expr_name = f"ablation_loss_triplet_only{name_suffix}{ema_suffix}_margin{args.triplet_margin}_collinear{proto_suffix}"
+        if args.variant is not None:
+            expr_name = f"ablation_loss_{args.variant}"
+        else:
+            name_suffix = "_4class" if class_num == 4 else ""
+            ema_suffix = f"_ema{args.m}" if args.m != 0.9 else ""
+            margin_suffix = f"_margin{args.triplet_margin}" if args.triplet_margin != 0.3 else ""
+            proto_suffix = "_proto" if no_classifier else ""
+            
+            expr_name = f"ablation_loss_{loss_type}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}"
+            if loss_type == 'triplet_only_collinear':
+                expr_name = f"ablation_loss_triplet_only{name_suffix}{ema_suffix}_margin{args.triplet_margin}_collinear{proto_suffix}"
             
         cmd = [
             sys.executable, "test.py",

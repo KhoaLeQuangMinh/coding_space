@@ -75,7 +75,13 @@ def main():
         loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
         
         for ckpt_name in CHECKPOINTS:
-            ckpt_path = os.path.join(opt.checkpoints_dir, f"{prefix}_{variant}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}_fold{fold}", ckpt_name)
+            if opt.variant is not None:
+                folder_name = f"{prefix}_{opt.variant}_fold{fold}"
+            else:
+                folder_name = f"{prefix}_{variant}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}_fold{fold}"
+                if variant == 'triplet_only_collinear':
+                    folder_name = f"{prefix}_triplet_only{name_suffix}{ema_suffix}_margin{opt.triplet_margin}_collinear{proto_suffix}_fold{fold}"
+            ckpt_path = os.path.join(opt.checkpoints_dir, folder_name, ckpt_name)
             
             if not os.path.exists(ckpt_path):
                 print(f"Skipping {ckpt_name} (Not found: {ckpt_path})")
@@ -122,7 +128,8 @@ def main():
                 df_data[f'feature_{i}'] = fold_features_np[:, i]
                 
             df = pd.DataFrame(df_data)
-            csv_name = f"{variant}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
+            csv_prefix = opt.variant if opt.variant is not None else f"{variant}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}"
+            csv_name = f"{csv_prefix}_{ckpt_name.split('.')[0]}_fold{fold}.csv"
             df.to_csv(os.path.join(opt.out_dir, csv_name), index=False)
             print(f"  -> Saved {csv_name}")
 

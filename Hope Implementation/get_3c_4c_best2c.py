@@ -18,7 +18,9 @@ variants = [
     'exp_3pole_local',
     'exp_3pole_global',
     '3pole_local_only',
-    '3pole_global_only'
+    '3pole_global_only',
+    'triplet_only_margin3.0_proto',
+    'triplet_only_margin3.0_collinear'
 ]
 
 row_labels = {
@@ -34,7 +36,9 @@ row_labels = {
     'exp_3pole_local': 'L_CE + L_Ins2Ins + L_3Pole_Triplet (Local) + L_Cls2Cls',
     'exp_3pole_global': 'L_CE + L_Ins2Ins + L_3Pole_Triplet (Global) + L_Cls2Cls',
     '3pole_local_only': 'L_CE + L_3Pole_Triplet (Local) Only',
-    '3pole_global_only': 'L_CE + L_3Pole_Triplet (Global) Only'
+    '3pole_global_only': 'L_CE + L_3Pole_Triplet (Global) Only',
+    'triplet_only_margin3.0_proto': 'CE + Triplet Only (Margin 3.0, Prototype Clf)',
+    'triplet_only_margin3.0_collinear': 'CE + Triplet Only (Margin 3.0, Collinear)'
 }
 
 def export_table(target):

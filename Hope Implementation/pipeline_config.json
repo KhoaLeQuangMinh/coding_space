@@ -225,6 +225,14 @@
       "triplet_margin": 3.0,
       "m": 0.9,
       "no_classifier": false
+    },
+    "triplet_only_ema0.5_margin5.0": {
+    "display_name": "CE + Triplet Only (EMA 0.5, Margin 5.0)",
+    "loss_type": "triplet_only",
+    "num_classes": 3,
+    "triplet_margin": 5.0,
+    "m": 0.5,
+    "no_classifier": false
     }
   },
   "checkpoints": [

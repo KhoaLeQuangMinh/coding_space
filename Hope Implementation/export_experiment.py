@@ -31,6 +31,9 @@ def build_experiment_name(params):
     margin_suffix = f"_margin{triplet_margin}" if triplet_margin != 0.3 else ""
     proto_suffix = "_proto" if no_classifier else ""
 
+    if loss_type == 'triplet_only_collinear':
+        return f"ablation_loss_triplet_only{name_suffix}{ema_suffix}_margin{triplet_margin}_collinear{proto_suffix}"
+
     return f"ablation_loss_{loss_type}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}"
 
 
@@ -45,7 +48,7 @@ def main():
 
     config = load_config(args.config)
     params = get_variant_params(args.variant, config)
-    experiment_name = build_experiment_name(params)
+    experiment_name = f"ablation_loss_{args.variant}"
 
     loss_type = params.get('loss_type', params.get('target_loss', 'full'))
     class_num = params.get('num_classes', 3)
@@ -58,7 +61,7 @@ def main():
     margin_suffix = f"_margin{triplet_margin}" if triplet_margin != 0.3 else ""
     proto_suffix = "_proto" if no_classifier else ""
 
-    variant_file_prefix = f"{loss_type}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}"
+    variant_file_prefix = args.variant if args.variant is not None else f"{loss_type}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}"
 
     zip_name = f"{args.variant}_results.zip"
     zip_path = os.path.join(args.out_dir, zip_name)

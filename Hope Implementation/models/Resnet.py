@@ -189,16 +189,18 @@ class ResNet(nn.Module):
 
     # online ema prototype update scheme
     def update(self, features, labels):
-        for cls_id in range(self.num_classes):
-            indices = torch.nonzero(labels == cls_id).squeeze()
-            if indices.numel() > 0:
-                # Handle single-element case
-                if indices.dim() == 0:
-                    indices = indices.unsqueeze(0)
-                tensors_with_label = features[indices]
-                tmp_tensor = torch.nn.functional.normalize(tensors_with_label.mean(dim=0), p=2, dim=0)
-                self.prototypes[cls_id] = self.prototypes[cls_id] * self.m + (1 - self.m) * tmp_tensor
-        self.prototypes = torch.nn.functional.normalize(self.prototypes, p=2, dim=1)
+        with torch.no_grad():
+            features = features.detach()
+            for cls_id in range(self.num_classes):
+                indices = torch.nonzero(labels == cls_id).squeeze()
+                if indices.numel() > 0:
+                    # Handle single-element case
+                    if indices.dim() == 0:
+                        indices = indices.unsqueeze(0)
+                    tensors_with_label = features[indices]
+                    tmp_tensor = torch.nn.functional.normalize(tensors_with_label.mean(dim=0), p=2, dim=0)
+                    self.prototypes[cls_id] = self.prototypes[cls_id] * self.m + (1 - self.m) * tmp_tensor
+            self.prototypes = torch.nn.functional.normalize(self.prototypes, p=2, dim=1).detach()
         return
 
     # save the prototypes

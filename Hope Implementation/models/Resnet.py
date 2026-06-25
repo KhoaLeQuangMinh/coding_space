@@ -154,7 +154,9 @@ class ResNet(nn.Module):
 
         # initialize the ema prototype
         self.prototypes = torch.nn.functional.normalize(nn.Parameter(torch.zeros(num_classes, 128), requires_grad=False), p=2,
-                                                        dim=1).cuda()
+                                                        dim=1)
+        if torch.cuda.is_available():
+            self.prototypes = self.prototypes.cuda()
         for m in self.modules():
             if isinstance(m, nn.Conv3d):
                 m.weight = nn.init.kaiming_normal_(m.weight, mode='fan_out')

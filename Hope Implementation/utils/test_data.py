@@ -31,9 +31,10 @@ def test_data(model, test_dataloaders, criterion):
     
     with torch.no_grad():
         model.eval()
+        device = next(model.parameters()).device
         for ii, batch in enumerate(test_dataloaders):
-            images, labels = batch[0].cuda(), batch[1].cuda()
-            labels_4c = batch[2].cuda() if len(batch) > 2 else None
+            images, labels = batch[0].to(device), batch[1].to(device)
+            labels_4c = batch[2].to(device) if len(batch) > 2 else None
             
             num_classes = model.module.num_classes if hasattr(model, 'module') else model.num_classes
             if num_classes == 4 and labels_4c is not None:

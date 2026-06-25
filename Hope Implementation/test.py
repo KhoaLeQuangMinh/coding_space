@@ -15,6 +15,7 @@ from sklearn.metrics import confusion_matrix
 import os
 
 def run_test(opt, current_fold):
+    device = torch.device('cuda' if torch.cuda.is_available() and len(opt.gpu_ids) > 0 else 'cpu')
     model = define_Cls(opt.cls_type, class_num=opt.class_num, init_type=opt.init_type, init_gain=opt.init_gain, m=opt.m,
                        gpu_ids=opt.gpu_ids, no_classifier=opt.no_classifier)
 
@@ -39,8 +40,8 @@ def run_test(opt, current_fold):
         state_dict = torch.load(load_dir, map_location='cpu')
         model.load_state_dict(state_dict, strict=False)
         # ema prototype
-        model.prototypes = state_dict['prototypes'].cuda()
-        model.cuda()
+        model.prototypes = state_dict['prototypes'].to(device)
+        model.to(device)
         print(f"loading weights from {load_dir}")
         print("Testing on the testing set")
         return test_data(model, test_loader, criterion)
@@ -51,6 +52,8 @@ def run_test(opt, current_fold):
 if __name__ == '__main__':
     # -----  Loading the init options -----
     opt = TestOptions().parse()
+    if not torch.cuda.is_available():
+        opt.gpu_ids = []
     
     all_metrics = []
     
@@ -226,6 +229,35 @@ if __name__ == '__main__':
                 f.write(cm_3c_df.to_markdown() + "\n\n")
                 f.write("COMBINED 4-CLASS CONFUSION MATRIX:\n")
                 f.write(cm_df.to_markdown() + "\n\n")
+                
+                # Write fold-specific confusion matrices
+                f.write("="*50 + "\n")
+                f.write("FOLD-SPECIFIC CONFUSION MATRICES:\n")
+                f.write("="*50 + "\n\n")
+                for idx, m in enumerate(all_metrics):
+                    fold_num = opt.specific_fold if opt.specific_fold != -1 else (idx + 1)
+                    f.write(f"FOLD {fold_num} CONFUSION MATRICES:\n\n")
+                    
+                    # 2-class
+                    fold_cm_2c = confusion_matrix(m['y_true_mci'], m['y_pred_mci'], labels=[0, 1])
+                    fold_cm_2c_df = pd.DataFrame(fold_cm_2c, index=['True sMCI', 'True pMCI'],
+                                                 columns=['Pred sMCI', 'Pred pMCI'])
+                    f.write(f"FOLD {fold_num} 2-CLASS CONFUSION MATRIX:\n")
+                    f.write(fold_cm_2c_df.to_markdown() + "\n\n")
+                    
+                    # 3-class
+                    fold_cm_3c = confusion_matrix(m['y_true_3c'], m['y_pred_3c'], labels=[0, 1, 2])
+                    fold_cm_3c_df = pd.DataFrame(fold_cm_3c, index=['True CN', 'True MCI', 'True AD'],
+                                                 columns=['Pred CN', 'Pred MCI', 'Pred AD'])
+                    f.write(f"FOLD {fold_num} 3-CLASS CONFUSION MATRIX:\n")
+                    f.write(fold_cm_3c_df.to_markdown() + "\n\n")
+                    
+                    # 4-class
+                    fold_cm_4c = confusion_matrix(m['y_true_4c'], m['y_pred_4c'], labels=[0, 1, 2, 3])
+                    fold_cm_4c_df = pd.DataFrame(fold_cm_4c, index=['True CN', 'True sMCI', 'True pMCI', 'True AD'],
+                                                 columns=['Pred CN', 'Pred sMCI', 'Pred pMCI', 'Pred AD'])
+                    f.write(f"FOLD {fold_num} 4-CLASS CONFUSION MATRIX:\n")
+                    f.write(fold_cm_4c_df.to_markdown() + "\n\n")
                 
             print(f"\nSaved Test Log to {txt_path}")
         except Exception as e:

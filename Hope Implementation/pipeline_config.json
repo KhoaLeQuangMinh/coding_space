@@ -233,6 +233,13 @@
     "triplet_margin": 5.0,
     "m": 0.5,
     "no_classifier": false
+    },
+    "3pole_local_only_ema0.5_margin5.0": {
+      "display_name": "CE + 3-Pole Triplet (Local) Only (EMA 0.5, Margin 5.0)",
+      "loss_type": "3pole_local_only",
+      "num_classes": 3,
+      "triplet_margin": 5.0,
+      "m": 0.5
     }
   },
   "checkpoints": [

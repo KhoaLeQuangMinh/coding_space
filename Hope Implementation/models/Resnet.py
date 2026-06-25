@@ -117,7 +117,8 @@ class ResNet(nn.Module):
                  sample_duration=128,
                  shortcut_type='B',
                  num_classes=2,
-                 m=0.99):
+                 m=0.99,
+                 no_classifier=False):
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv3d(
@@ -149,6 +150,7 @@ class ResNet(nn.Module):
         self.fc2 = nn.Linear(128, num_classes)
         self.m = m
         self.cos = torch.nn.CosineSimilarity(dim=1)
+        self.no_classifier = no_classifier
 
         # initialize the ema prototype
         self.prototypes = torch.nn.functional.normalize(nn.Parameter(torch.zeros(num_classes, 128), requires_grad=False), p=2,
@@ -219,7 +221,10 @@ class ResNet(nn.Module):
         # original feature
         x_ori = self.fc1(x_ori)
         # corresponding fc output
-        x = self.fc2(x_ori)
+        if self.no_classifier:
+            x = - torch.pow(torch.cdist(x_ori, self.prototypes), 2)
+        else:
+            x = self.fc2(x_ori)
         x_ori_norm = torch.nn.functional.normalize(x_ori, p=2, dim=1)
         # prototype comparison
         spmci_prob = torch.softmax(torch.cat((self.cos(x_ori_norm, self.prototypes[0]), self.cos(x_ori_norm,

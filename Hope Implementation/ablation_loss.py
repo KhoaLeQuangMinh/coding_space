@@ -18,6 +18,7 @@ def main():
     args = parser.parse_args()
 
     # Resolve variant from config if provided
+    no_classifier = False
     if args.variant is not None:
         config = load_config(args.config)
         params = get_variant_params(args.variant, config)
@@ -25,6 +26,7 @@ def main():
         args.num_classes = params.get('num_classes', args.num_classes)
         args.triplet_margin = params.get('triplet_margin', args.triplet_margin)
         args.m = params.get('m', args.m)
+        no_classifier = params.get('no_classifier', False)
 
     if args.target_loss is None:
         parser.error("--target_loss is required (or use --variant to load from config)")
@@ -43,6 +45,7 @@ def main():
     name_suffix = "_4class" if class_num == 4 else ""
     ema_suffix = f"_ema{args.m}" if args.m != 0.9 else ""
     margin_suffix = f"_margin{args.triplet_margin}" if args.triplet_margin != 0.3 else ""
+    proto_suffix = "_proto" if no_classifier else ""
     cmd = [
         sys.executable, "train.py",
         "--data_dir", args.data_dir,
@@ -54,9 +57,11 @@ def main():
         "--gpu_ids", "0",
         "--epoch_count", "30",
         "--checkpoints_dir", "./checkpoints",
-        "--name", f"ablation_loss_{loss_type}{name_suffix}{ema_suffix}{margin_suffix}",
+        "--name", f"ablation_loss_{loss_type}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}",
         "--triplet_margin", str(args.triplet_margin)
     ]
+    if no_classifier:
+        cmd.append("--no_classifier")
     
     if class_num == 4:
         cmd.extend(["--dataset", "all", "--group", "all"])

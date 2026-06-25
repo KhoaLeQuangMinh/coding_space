@@ -13,7 +13,8 @@ from models.qwk_loss import DifferentiableQWKLoss
 def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                valid_dataloaders, epochs, optimizer, scheduler,
                basiccomputing, criterion, criterionRank,
-               expr_dir, print_freq, save_epoch_freq, ablation_loss='full'
+               expr_dir, print_freq, save_epoch_freq, ablation_loss='full',
+               no_classifier=False
                ):
     '''
     train process

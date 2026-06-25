@@ -24,7 +24,7 @@ def run_fold(opt, current_fold):
                    "fold": current_fold
                })
     model = define_Cls(opt.cls_type, class_num=opt.class_num, init_type=opt.init_type, init_gain=opt.init_gain, m=opt.m,
-                       gpu_ids=opt.gpu_ids)
+                       gpu_ids=opt.gpu_ids, no_classifier=opt.no_classifier)
     epochs = opt.epoch_count
     optimizer = optim.Adam(model.parameters(), lr=opt.lr)
     scheduler = get_scheduler(optimizer, opt)
@@ -70,7 +70,7 @@ def run_fold(opt, current_fold):
     train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                valid_loader, epochs, optimizer, scheduler,
                basiccomputing, criterion, criterionRank, expr_dir, opt.print_freq,
-               opt.save_epoch_freq, opt.ablation_loss)
+               opt.save_epoch_freq, opt.ablation_loss, opt.no_classifier)
     wandb.finish()
 
 

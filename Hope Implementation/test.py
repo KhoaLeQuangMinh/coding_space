@@ -16,7 +16,7 @@ import os
 
 def run_test(opt, current_fold):
     model = define_Cls(opt.cls_type, class_num=opt.class_num, init_type=opt.init_type, init_gain=opt.init_gain, m=opt.m,
-                       gpu_ids=opt.gpu_ids)
+                       gpu_ids=opt.gpu_ids, no_classifier=opt.no_classifier)
 
     # criterion preparation
     criterion = nn.CrossEntropyLoss()

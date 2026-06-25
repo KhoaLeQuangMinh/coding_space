@@ -209,6 +209,14 @@
       "num_classes": 3,
       "triplet_margin": 5.0,
       "m": 0.9
+    },
+    "triplet_only_margin3.0_proto": {
+      "display_name": "CE + Triplet Only (Margin 3.0, Prototype Clf)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 3.0,
+      "m": 0.9,
+      "no_classifier": true
     }
   },
   "checkpoints": [

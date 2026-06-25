@@ -24,12 +24,14 @@ def build_experiment_name(params):
     class_num = params.get('num_classes', 3)
     m = params.get('m', 0.9)
     triplet_margin = params.get('triplet_margin', 0.3)
+    no_classifier = params.get('no_classifier', False)
 
     name_suffix = "_4class" if class_num == 4 else ""
     ema_suffix = f"_ema{m}" if m != 0.9 else ""
     margin_suffix = f"_margin{triplet_margin}" if triplet_margin != 0.3 else ""
+    proto_suffix = "_proto" if no_classifier else ""
 
-    return f"ablation_loss_{loss_type}{name_suffix}{ema_suffix}{margin_suffix}"
+    return f"ablation_loss_{loss_type}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}"
 
 
 def main():
@@ -49,10 +51,14 @@ def main():
     class_num = params.get('num_classes', 3)
     m = params.get('m', 0.9)
     triplet_margin = params.get('triplet_margin', 0.3)
+    no_classifier = params.get('no_classifier', False)
+
     name_suffix = "_4class" if class_num == 4 else ""
     ema_suffix = f"_ema{m}" if m != 0.9 else ""
     margin_suffix = f"_margin{triplet_margin}" if triplet_margin != 0.3 else ""
-    variant_file_prefix = f"{loss_type}{name_suffix}{ema_suffix}{margin_suffix}"
+    proto_suffix = "_proto" if no_classifier else ""
+
+    variant_file_prefix = f"{loss_type}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}"
 
     zip_name = f"{args.variant}_results.zip"
     zip_path = os.path.join(args.out_dir, zip_name)

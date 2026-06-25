@@ -46,6 +46,11 @@ def main():
     ema_suffix = f"_ema{args.m}" if args.m != 0.9 else ""
     margin_suffix = f"_margin{args.triplet_margin}" if args.triplet_margin != 0.3 else ""
     proto_suffix = "_proto" if no_classifier else ""
+    
+    expr_name = f"ablation_loss_{loss_type}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}"
+    if loss_type == 'triplet_only_collinear':
+        expr_name = f"ablation_loss_triplet_only{name_suffix}{ema_suffix}_margin{args.triplet_margin}_collinear{proto_suffix}"
+        
     cmd = [
         sys.executable, "train.py",
         "--data_dir", args.data_dir,
@@ -57,7 +62,7 @@ def main():
         "--gpu_ids", "0",
         "--epoch_count", "30",
         "--checkpoints_dir", "./checkpoints",
-        "--name", f"ablation_loss_{loss_type}{name_suffix}{ema_suffix}{margin_suffix}{proto_suffix}",
+        "--name", expr_name,
         "--triplet_margin", str(args.triplet_margin)
     ]
     if no_classifier:

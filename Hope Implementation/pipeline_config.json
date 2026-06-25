@@ -217,6 +217,14 @@
       "triplet_margin": 3.0,
       "m": 0.9,
       "no_classifier": true
+    },
+    "triplet_only_margin3.0_collinear": {
+      "display_name": "CE + Triplet Only (Margin 3.0, Collinear)",
+      "loss_type": "triplet_only_collinear",
+      "num_classes": 3,
+      "triplet_margin": 3.0,
+      "m": 0.9,
+      "no_classifier": false
     }
   },
   "checkpoints": [

@@ -52,6 +52,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         train_loss_ins2cls = 0.
         train_loss_cls2cls = 0.
         train_loss_hyb = 0.
+        train_loss_collinear = 0.
         y_train_true = []
         y_train_pred = []
         cn_iterator = iter(total_cn_loader)
@@ -97,7 +98,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             features, outputs, _ = model.forward(images)
 
             # basic computing
-            compactness_loss, separation_loss, mus, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global = basiccomputing(features, labels, labels_4c, global_protos)
+            compactness_loss, separation_loss, mus, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime = basiccomputing(features, labels, labels_4c, global_protos)
 
             # CE loss
             loss_CE = criterion(outputs, labels)
@@ -134,6 +135,8 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                 loss_hyb = loss_ins2ins + (triplet_ins2cls / features.shape[1]) + loss_cls2cls
             elif ablation_loss == 'triplet_only':
                 loss_hyb = (triplet_ins2cls / features.shape[1])
+            elif ablation_loss == 'triplet_only_collinear':
+                loss_hyb = (triplet_ins2cls / features.shape[1])
             elif ablation_loss == 'exp_hierarchical_triplet_ins2cls':
                 loss_hyb = loss_ins2ins + (hierarchical_triplet_ins2cls / features.shape[1]) + loss_cls2cls
             elif ablation_loss == 'exp_3pole_local':
@@ -152,18 +155,28 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             # total loss
             lambda_hyb = e * (1 / epochs)
             loss = loss_CE + lambda_hyb * loss_hyb
+            if ablation_loss == 'triplet_only_collinear':
+                loss = loss + 1.0 * collinear_loss
 
             # backward
             loss.backward()
             optimizer.step()
 
             # prototype online update
-            model.update(features, labels)
+            if ablation_loss == 'triplet_only_collinear':
+                with torch.no_grad():
+                    if hasattr(model, 'module'):
+                        model.module.prototypes.copy_(P_prime.detach())
+                    else:
+                        model.prototypes.copy_(P_prime.detach())
+            else:
+                model.update(features, labels)
 
             # loss logging
             train_loss_CE += loss_CE.item()
             train_loss_ins2ins += loss_ins2ins.item()
-            if ablation_loss in ['exp_triplet_ins2cls', 'triplet_only']:
+            train_loss_collinear += collinear_loss.item()
+            if ablation_loss in ['exp_triplet_ins2cls', 'triplet_only', 'triplet_only_collinear']:
                 train_loss_ins2cls += (triplet_ins2cls / features.shape[1]).item()
             elif ablation_loss in ['exp_3pole_local', '3pole_local_only']:
                 train_loss_ins2cls += (three_pole_local / features.shape[1]).item()
@@ -246,6 +259,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         train_loss_ins2cls = train_loss_ins2cls / len(total_ad_loader)
         train_loss_cls2cls = train_loss_cls2cls / len(total_ad_loader)
         train_loss_hyb = train_loss_hyb / len(total_ad_loader)
+        train_loss_collinear = train_loss_collinear / len(total_ad_loader)
         train_loss = train_loss / len(total_ad_loader)
         
         val_loss = val_loss / max(1, val_samples)
@@ -285,6 +299,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                        "train_loss_ins2ins": train_loss_ins2ins,
                        "train_loss_ins2cls": train_loss_ins2cls,
                        "train_loss_cls2cls": train_loss_cls2cls,
+                       "train_loss_collinear": train_loss_collinear,
                        "train_acc": train_acc,
                        "train_f1": train_f1_score,
                        "train_sen": train_recall,
@@ -311,6 +326,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             'epoch': e,
             'ablation_loss': ablation_loss,
             'train_loss': train_loss,
+            'train_loss_collinear': train_loss_collinear,
             'train_acc': train_acc,
             'train_f1': train_f1_score,
             'val_loss': val_loss,

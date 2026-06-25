@@ -3,11 +3,12 @@ import torch.nn as nn
 
 
 class BasicComputing(nn.Module):
-    def __init__(self, class_num, gpu_ids=None, dim=512, margin=0.0):
+    def __init__(self, class_num, gpu_ids=None, dim=512, margin=0.0, m=0.9):
         super(BasicComputing, self).__init__()
         self.dim = dim
         self.class_num = class_num
         self.margin = margin
+        self.m = m
 
     # compute current prototype
     def compute_mean(self, x):
@@ -172,4 +173,25 @@ class BasicComputing(nn.Module):
         if self.class_num == 3 and labels_4c is not None and global_protos is not None and global_protos.shape[0] >= 3:
             three_pole_global = self.compute_3pole_triplet(features, labels_4c, global_protos[0], global_protos[1], global_protos[2])
 
-        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global
+        # EXPERIMENTAL 5: Collinearity Loss on candidate prototypes
+        collinear_loss = torch.tensor(0.0, device=features.device)
+        P_prime = torch.zeros_like(global_protos) if global_protos is not None else None
+        
+        if global_protos is not None and global_protos.shape[0] >= 3:
+            means_dict_full = {}
+            for c in range(self.class_num):
+                index = torch.nonzero(labels == c).reshape(-1)
+                if index.numel() > 0:
+                    means_dict_full[c] = torch.nn.functional.normalize(features.index_select(0, index).mean(dim=0), p=2, dim=0)
+                else:
+                    means_dict_full[c] = global_protos[c]
+            
+            for c in range(self.class_num):
+                P_prime[c] = torch.nn.functional.normalize(
+                    global_protos[c] * self.m + (1.0 - self.m) * means_dict_full[c], p=2, dim=0
+                )
+                
+            midpoint = (P_prime[0] + P_prime[2]) / 2.0
+            collinear_loss = torch.sum((P_prime[1] - midpoint) ** 2)
+
+        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime

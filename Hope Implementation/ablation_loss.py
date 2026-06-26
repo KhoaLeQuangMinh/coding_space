@@ -21,6 +21,7 @@ def main():
 
     # Resolve variant from config if provided
     no_classifier = False
+    intra_margin = 0.15
     if args.variant is not None:
         config = load_config(args.config)
         params = get_variant_params(args.variant, config)
@@ -28,6 +29,7 @@ def main():
         args.num_classes = params.get('num_classes', args.num_classes)
         args.triplet_margin = params.get('triplet_margin', args.triplet_margin)
         args.m = params.get('m', args.m)
+        intra_margin = params.get('intra_margin', intra_margin)
         no_classifier = params.get('no_classifier', False)
 
     if args.target_loss is None:
@@ -68,7 +70,8 @@ def main():
         "--epoch_count", str(args.epoch_count),
         "--checkpoints_dir", "./checkpoints",
         "--name", expr_name,
-        "--triplet_margin", str(args.triplet_margin)
+        "--triplet_margin", str(args.triplet_margin),
+        "--intra_margin", str(intra_margin)
     ]
     if no_classifier:
         cmd.append("--no_classifier")

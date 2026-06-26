@@ -31,12 +31,12 @@ def run_fold(opt, current_fold):
     scheduler = get_scheduler(optimizer, opt)
 
     # criterion preparation
-    basiccomputing = BasicComputing(class_num=opt.class_num, gpu_ids=opt.gpu_ids, margin=opt.triplet_margin, m=opt.m)
+    basiccomputing = BasicComputing(class_num=opt.class_num, gpu_ids=opt.gpu_ids, margin=opt.triplet_margin, m=opt.m, intra_margin=opt.intra_margin)
     criterion = nn.CrossEntropyLoss()
     criterionRank = RankLoss(opt.interpolation_lambda)
 
     # dataset preparation
-    return_4c = (opt.class_num == 4)
+    return_4c = (opt.class_num == 4) or (opt.ablation_loss == 'triplet_pole_intra')
     total_cn_dataset = Dataset(mode="total_cn", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold, return_4c=return_4c)
     total_ad_dataset = Dataset(mode="total_ad", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold, return_4c=return_4c)
     total_mci_dataset = Dataset(mode="total_mci", data_dir=opt.data_dir, seed=opt.seed, kfold=opt.kfold, current_fold=current_fold, return_4c=return_4c)

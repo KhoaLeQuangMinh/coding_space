@@ -3,12 +3,13 @@ import torch.nn as nn
 
 
 class BasicComputing(nn.Module):
-    def __init__(self, class_num, gpu_ids=None, dim=512, margin=0.0, m=0.9):
+    def __init__(self, class_num, gpu_ids=None, dim=512, margin=0.0, m=0.9, intra_margin=0.15):
         super(BasicComputing, self).__init__()
         self.dim = dim
         self.class_num = class_num
         self.margin = margin
         self.m = m
+        self.intra_margin = intra_margin
 
     # compute current prototype
     def compute_mean(self, x):
@@ -113,6 +114,36 @@ class BasicComputing(nn.Module):
             
         return loss
 
+    def compute_intra_pole_loss(self, features, labels_4c, global_protos, margin=None):
+        if labels_4c is None or global_protos is None or global_protos.shape[0] < self.class_num:
+            return torch.tensor(0.0, device=features.device)
+        if margin is None:
+            margin = self.intra_margin
+            
+        loss = torch.tensor(0.0, device=features.device)
+        
+        idx_cn = torch.nonzero(labels_4c == 0).reshape(-1)
+        idx_smci = torch.nonzero(labels_4c == 1).reshape(-1)
+        idx_pmci = torch.nonzero(labels_4c == 2).reshape(-1)
+        idx_ad = torch.nonzero(labels_4c == 3).reshape(-1)
+        
+        # 1. sMCI further from CN prototype than CN
+        if idx_cn.numel() > 0 and idx_smci.numel() > 0:
+            dist_cn = torch.sum((features.index_select(0, idx_cn) - global_protos[0]) ** 2, dim=1)
+            dist_smci = torch.sum((features.index_select(0, idx_smci) - global_protos[0]) ** 2, dim=1)
+            loss_cn_smci = torch.nn.functional.relu(dist_cn.unsqueeze(1) - dist_smci.unsqueeze(0) + margin)
+            loss += loss_cn_smci.mean(dim=0).sum()
+            
+        # 2. pMCI further from AD prototype than AD
+        if idx_ad.numel() > 0 and idx_pmci.numel() > 0:
+            proto_ad = global_protos[self.class_num - 1]
+            dist_ad = torch.sum((features.index_select(0, idx_ad) - proto_ad) ** 2, dim=1)
+            dist_pmci = torch.sum((features.index_select(0, idx_pmci) - proto_ad) ** 2, dim=1)
+            loss_ad_pmci = torch.nn.functional.relu(dist_ad.unsqueeze(1) - dist_pmci.unsqueeze(0) + margin)
+            loss += loss_ad_pmci.mean(dim=0).sum()
+            
+        return loss
+
     def __call__(self, features, labels, labels_4c=None, global_protos=None):
         compactness_losslist = []
         separation_losslist = []
@@ -194,4 +225,7 @@ class BasicComputing(nn.Module):
             midpoint = (P_prime[0] + P_prime[2]) / 2.0
             collinear_loss = torch.sum((P_prime[1] - midpoint) ** 2)
 
-        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime
+        # Compute Intra-Pole Triplet Loss
+        intra_pole_loss = self.compute_intra_pole_loss(features, labels_4c, global_protos)
+
+        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime, intra_pole_loss

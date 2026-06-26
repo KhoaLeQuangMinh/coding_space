@@ -275,6 +275,22 @@
       "num_classes": 3,
       "triplet_margin": 0.0,
       "m": 0.9
+    },
+    "triplet_pole_intra": {
+      "display_name": "CE + Triplet (Poles) + Intra-Pole Triplet",
+      "loss_type": "triplet_pole_intra",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "intra_margin": 0.15,
+      "m": 0.9
+    },
+    "triplet_pole_intra_margin0.0": {
+      "display_name": "CE + Triplet (Poles) + Intra-Pole Triplet (Margin 0.0)",
+      "loss_type": "triplet_pole_intra",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "intra_margin": 0.0,
+      "m": 0.9
     }
   },
   "checkpoints": [

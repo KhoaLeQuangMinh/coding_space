@@ -6,6 +6,7 @@ import wandb
 
 from models.BasicComputing import BasicComputing
 from models.ranking import RankLoss
+from models.sigreg import SIGReg
 from options.train_options import TrainOptions
 from utils.Dataset import *
 from utils.tools import *
@@ -66,11 +67,17 @@ def run_fold(opt, current_fold):
     expr_dir = os.path.join(opt.checkpoints_dir, f"{opt.name}_fold{current_fold}")
     os.makedirs(expr_dir, exist_ok=True)
 
+    # SigREG module initialization
+    sigreg_module = SIGReg(knots=opt.sigreg_knots, num_proj=opt.sigreg_num_proj)
+    if len(opt.gpu_ids) > 0 and opt.gpu_ids != '-1':
+        sigreg_module = sigreg_module.cuda()
+
     # train data
     train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                valid_loader, epochs, optimizer, scheduler,
                basiccomputing, criterion, criterionRank, expr_dir, opt.print_freq,
-               opt.save_epoch_freq, opt.ablation_loss, opt.no_classifier)
+               opt.save_epoch_freq, opt.ablation_loss, opt.no_classifier,
+               sigreg_module=sigreg_module, sigreg_weight=opt.sigreg_weight)
     wandb.finish()
 
 

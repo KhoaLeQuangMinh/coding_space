@@ -14,7 +14,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                valid_dataloaders, epochs, optimizer, scheduler,
                basiccomputing, criterion, criterionRank,
                expr_dir, print_freq, save_epoch_freq, ablation_loss='full',
-               no_classifier=False
+               no_classifier=False, sigreg_module=None, sigreg_weight=0.09
                ):
     '''
     train process
@@ -39,10 +39,11 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
     steps = 0
     history = []
     
-    # Initialize Triple-Saving trackers
-    best_val_acc_2c = 0.0
-    best_val_acc_3c = 0.0
-    best_val_acc_4c = 0.0
+    # Initialize Triple-Saving trackers and resolve device
+    device = next(model.parameters()).device
+    best_val_acc_2c = -1.0
+    best_val_acc_3c = -1.0
+    best_val_acc_4c = -1.0
     qwk_loss_fn = None
     for e in tqdm(range(1, epochs + 1)):
         model.train()
@@ -53,6 +54,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         train_loss_cls2cls = 0.
         train_loss_hyb = 0.
         train_loss_collinear = 0.
+        train_loss_sigreg = 0.
         y_train_true = []
         y_train_pred = []
         cn_iterator = iter(total_cn_loader)
@@ -85,9 +87,9 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
 
             imgs = torch.cat((imgs_cn, imgs_mci, imgs_ad))
             labels = torch.cat((labels_cn, labels_mci, labels_ad))
-            images = imgs.cuda(non_blocking=True)
-            labels = labels.cuda(non_blocking=True)
-            labels_4c = torch.cat((labels_cn_4c, labels_mci_4c, labels_ad_4c)).cuda(non_blocking=True) if labels_ad_4c is not None else None
+            images = imgs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            labels_4c = torch.cat((labels_cn_4c, labels_mci_4c, labels_ad_4c)).to(device, non_blocking=True) if labels_ad_4c is not None else None
             
             num_classes = model.module.num_classes if hasattr(model, 'module') else model.num_classes
             global_protos = model.module.prototypes if hasattr(model, 'module') else model.prototypes
@@ -106,7 +108,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             # Optional QWK Loss
             if ablation_loss == 'qwk_hierarchical_triplet':
                 if qwk_loss_fn is None:
-                    qwk_loss_fn = DifferentiableQWKLoss(num_classes=num_classes).cuda()
+                    qwk_loss_fn = DifferentiableQWKLoss(num_classes=num_classes).to(device)
                 loss_QWK = qwk_loss_fn(outputs, labels)
                 loss_CE = loss_QWK  # Replace standard CE with QWK
 
@@ -115,7 +117,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             loss_ins2ins = criterionRank(features, labels)  # instance-to-instance loss
             loss_ins2cls = compactness_loss / features.shape[1]  # instance-to-class loss
             
-            present_classes = torch.unique(labels).float().cuda()
+            present_classes = torch.unique(labels).float().to(device)
             if len(present_classes) > 1:
                 loss_cls2cls = features.shape[1] / separation_loss + criterionRank(mus, present_classes)
             else:
@@ -137,6 +139,12 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                 loss_hyb = (triplet_ins2cls / features.shape[1])
             elif ablation_loss == 'triplet_only_collinear':
                 loss_hyb = (triplet_ins2cls / features.shape[1])
+            elif ablation_loss == 'triplet_only_sigreg':
+                if sigreg_module is not None:
+                    sigreg_loss = sigreg_module(features.unsqueeze(0))
+                else:
+                    sigreg_loss = torch.tensor(0.0, device=loss_CE.device)
+                loss_hyb = (triplet_ins2cls / features.shape[1]) + sigreg_weight * sigreg_loss
             elif ablation_loss == 'exp_hierarchical_triplet_ins2cls':
                 loss_hyb = loss_ins2ins + (hierarchical_triplet_ins2cls / features.shape[1]) + loss_cls2cls
             elif ablation_loss == 'exp_3pole_local':
@@ -176,7 +184,10 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             train_loss_CE += loss_CE.item()
             train_loss_ins2ins += loss_ins2ins.item()
             train_loss_collinear += collinear_loss.item()
-            if ablation_loss in ['exp_triplet_ins2cls', 'triplet_only', 'triplet_only_collinear']:
+            if ablation_loss == 'triplet_only_sigreg' and sigreg_module is not None:
+                train_loss_sigreg += sigreg_loss.item()
+                
+            if ablation_loss in ['exp_triplet_ins2cls', 'triplet_only', 'triplet_only_collinear', 'triplet_only_sigreg']:
                 train_loss_ins2cls += (triplet_ins2cls / features.shape[1]).item()
             elif ablation_loss in ['exp_3pole_local', '3pole_local_only']:
                 train_loss_ins2cls += (three_pole_local / features.shape[1]).item()
@@ -209,7 +220,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
         with torch.no_grad():
             model.eval()
             for ii, (images, labels) in enumerate(valid_dataloaders):
-                images, labels = images.cuda(), labels.cuda()
+                images, labels = images.to(device), labels.to(device)
                 _, x, outputs = model(images)
                 
                 _, val_predicted = torch.max(outputs.data, 1)
@@ -300,6 +311,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                        "train_loss_ins2cls": train_loss_ins2cls,
                        "train_loss_cls2cls": train_loss_cls2cls,
                        "train_loss_collinear": train_loss_collinear,
+                       "train_loss_sigreg": train_loss_sigreg,
                        "train_acc": train_acc,
                        "train_f1": train_f1_score,
                        "train_sen": train_recall,

@@ -15,5 +15,8 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr_policy', type=str, default='exp',
                             help='learning rate policy: lambda|step|plateau|cosine')
         parser.add_argument('--interpolation_lambda', type=float, default=20.0, help='interpolation strength')
+        parser.add_argument('--sigreg_weight', type=float, default=0.09, help='SigREG loss coefficient weight')
+        parser.add_argument('--sigreg_knots', type=int, default=17, help='number of knots for SigREG')
+        parser.add_argument('--sigreg_num_proj', type=int, default=1024, help='number of projections for SigREG')
         self.isTrain = True
         return parser

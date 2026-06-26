@@ -15,6 +15,7 @@ def main():
     parser.add_argument('--m', type=float, default=0.9, help='EMA momentum')
     parser.add_argument('--variant', type=str, default=None, help='Variant key from pipeline_config.json (overrides manual args)')
     parser.add_argument('--config', type=str, default=None, help='Path to pipeline_config.json')
+    parser.add_argument('--gpu_ids', type=str, default='0', help='GPU IDs (e.g. 0, use empty string or -1 for CPU)')
     args = parser.parse_args()
 
     # Resolve variant from config if provided
@@ -62,7 +63,7 @@ def main():
             "--test_target", test_target,
             "--name", expr_name,
             "--checkpoints_dir", "./checkpoints",
-            "--gpu_ids", "0"
+            "--gpu_ids", args.gpu_ids
         ]
         if no_classifier:
             cmd.append("--no_classifier")

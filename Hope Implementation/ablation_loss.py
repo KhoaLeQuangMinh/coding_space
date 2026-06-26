@@ -15,6 +15,8 @@ def main():
     parser.add_argument('--m', type=float, default=0.9, help='EMA momentum')
     parser.add_argument('--variant', type=str, default=None, help='Variant key from pipeline_config.json (overrides manual args)')
     parser.add_argument('--config', type=str, default=None, help='Path to pipeline_config.json')
+    parser.add_argument('--epoch_count', type=int, default=30, help='Number of training epochs')
+    parser.add_argument('--gpu_ids', type=str, default='0', help='GPU IDs (e.g. 0, use empty string or -1 for CPU)')
     args = parser.parse_args()
 
     # Resolve variant from config if provided
@@ -62,8 +64,8 @@ def main():
         "--m", str(args.m),
         "--ablation_loss", loss_type,
         "--class_num", str(class_num),
-        "--gpu_ids", "0",
-        "--epoch_count", "30",
+        "--gpu_ids", args.gpu_ids,
+        "--epoch_count", str(args.epoch_count),
         "--checkpoints_dir", "./checkpoints",
         "--name", expr_name,
         "--triplet_margin", str(args.triplet_margin)

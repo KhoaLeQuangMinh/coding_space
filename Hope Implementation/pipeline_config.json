@@ -269,11 +269,11 @@
       "triplet_margin": 0.0,
       "m": 0.7
     },
-    "triplet_only_sigreg": {
-      "display_name": "CE + Triplet Only + SigREG",
+    "triplet_only_sigreg_margin0.0": {
+      "display_name": "CE + Triplet Only + SigREG (Margin 0.0)",
       "loss_type": "triplet_only_sigreg",
       "num_classes": 3,
-      "triplet_margin": 0.3,
+      "triplet_margin": 0.0,
       "m": 0.9
     }
   },

@@ -43,6 +43,7 @@ class BaseOptions():
         parser.add_argument('--triplet_margin', type=float, default=0.3, help='Margin for triplet relative losses')
         parser.add_argument('--intra_margin', type=float, default=0.15, help='Margin for intra-pole triplet loss')
         parser.add_argument('--no_classifier', action='store_true', help='Use prototype-based classification instead of linear layer')
+        parser.add_argument('--dist_ema', action='store_true', help='Use robust Cauchy-weighted EMA for prototype updates')
         self.initialized = True
 
         return parser

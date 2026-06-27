@@ -25,7 +25,7 @@ def run_fold(opt, current_fold):
                    "fold": current_fold
                })
     model = define_Cls(opt.cls_type, class_num=opt.class_num, init_type=opt.init_type, init_gain=opt.init_gain, m=opt.m,
-                       gpu_ids=opt.gpu_ids, no_classifier=opt.no_classifier)
+                       gpu_ids=opt.gpu_ids, no_classifier=opt.no_classifier, use_dist_ema=opt.dist_ema)
     epochs = opt.epoch_count
     optimizer = optim.Adam(model.parameters(), lr=opt.lr)
     scheduler = get_scheduler(optimizer, opt)

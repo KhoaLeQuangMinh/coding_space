@@ -82,7 +82,7 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=''):
     return net
 
 
-def define_Cls(netCls, class_num=4, init_type='normal', init_gain=0.02, m=0.99, gpu_ids=[], no_classifier=False):
+def define_Cls(netCls, class_num=4, init_type='normal', init_gain=0.02, m=0.99, gpu_ids=[], no_classifier=False, use_dist_ema=False):
     """
     define the corresponding network
     :param netCls: define type
@@ -92,10 +92,11 @@ def define_Cls(netCls, class_num=4, init_type='normal', init_gain=0.02, m=0.99, 
     :param m: the momentum decay value for online prototype update scheme
     :param gpu_ids: the gpu ids
     :param no_classifier: whether to use prototype-based classification
+    :param use_dist_ema: whether to use robust Cauchy-weighted EMA updates
     :return: the initialized network
     """
     if netCls == 'resnet3d':
-        net = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=m, no_classifier=no_classifier)
+        net = resnet18(spatial_size=128, sample_duration=128, num_classes=class_num, m=m, no_classifier=no_classifier, use_dist_ema=use_dist_ema)
     return init_net(net, init_type, init_gain, gpu_ids)
 
 

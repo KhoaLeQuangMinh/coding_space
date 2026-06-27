@@ -118,7 +118,8 @@ class ResNet(nn.Module):
                  shortcut_type='B',
                  num_classes=2,
                  m=0.99,
-                 no_classifier=False):
+                 no_classifier=False,
+                 use_dist_ema=False):
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv3d(
@@ -151,6 +152,11 @@ class ResNet(nn.Module):
         self.m = m
         self.cos = torch.nn.CosineSimilarity(dim=1)
         self.no_classifier = no_classifier
+        self.use_dist_ema = use_dist_ema
+
+        # Always register running statistics buffers for 100% backward/forward state_dict compatibility
+        self.register_buffer("running_mean_dist", torch.zeros(num_classes))
+        self.register_buffer("running_mean_sq_dist", torch.zeros(num_classes))
 
         # initialize the ema prototype
         self.prototypes = torch.nn.functional.normalize(nn.Parameter(torch.zeros(num_classes, 128), requires_grad=False), p=2,
@@ -200,8 +206,46 @@ class ResNet(nn.Module):
                     if indices.dim() == 0:
                         indices = indices.unsqueeze(0)
                     tensors_with_label = features[indices]
-                    tmp_tensor = torch.nn.functional.normalize(tensors_with_label.mean(dim=0), p=2, dim=0)
-                    self.prototypes[cls_id] = self.prototypes[cls_id] * self.m + (1 - self.m) * tmp_tensor
+                    
+                    if hasattr(self, 'use_dist_ema') and self.use_dist_ema:
+                        proto_c = self.prototypes[cls_id]
+                        dist_c = torch.sum((tensors_with_label - proto_c) ** 2, dim=1)
+                        
+                        m1_c = dist_c.mean()
+                        m2_c = (dist_c ** 2).mean()
+                        
+                        s1_c = self.running_mean_dist[cls_id].item()
+                        if s1_c == 0.0:
+                            # Cold-start initialization
+                            self.running_mean_dist[cls_id] = m1_c
+                            self.running_mean_sq_dist[cls_id] = m2_c
+                            w_i = torch.ones_like(dist_c)
+                        else:
+                            # Z-score & Cauchy weights
+                            s2_c = self.running_mean_sq_dist[cls_id].item()
+                            std_c = torch.sqrt(torch.clamp(s2_c - s1_c ** 2, min=0.0) + 1e-6)
+                            z_i = (dist_c - s1_c) / (std_c + 1e-6)
+                            w_i = 1.0 / (1.0 + z_i ** 2)
+                            
+                        sum_w = w_i.sum() + 1e-6
+                        weighted_features = (tensors_with_label * w_i.unsqueeze(1)).sum(dim=0) / sum_w
+                        tmp_tensor = torch.nn.functional.normalize(weighted_features, p=2, dim=0)
+                        
+                        weighted_m1 = (dist_c * w_i).sum() / sum_w
+                        weighted_m2 = ((dist_c ** 2) * w_i).sum() / sum_w
+                        
+                        w_bar = w_i.mean()
+                        alpha_eff = w_bar * (1.0 - self.m)
+                        
+                        # Update statistics
+                        self.running_mean_dist[cls_id] = self.running_mean_dist[cls_id] * (1.0 - alpha_eff) + alpha_eff * weighted_m1
+                        self.running_mean_sq_dist[cls_id] = self.running_mean_sq_dist[cls_id] * (1.0 - alpha_eff) + alpha_eff * weighted_m2
+                        
+                        # Update prototypes
+                        self.prototypes[cls_id] = self.prototypes[cls_id] * (1.0 - alpha_eff) + alpha_eff * tmp_tensor
+                    else:
+                        tmp_tensor = torch.nn.functional.normalize(tensors_with_label.mean(dim=0), p=2, dim=0)
+                        self.prototypes[cls_id] = self.prototypes[cls_id] * self.m + (1 - self.m) * tmp_tensor
             self.prototypes = torch.nn.functional.normalize(self.prototypes, p=2, dim=1).detach()
         return
 

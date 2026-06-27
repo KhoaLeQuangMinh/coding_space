@@ -276,6 +276,14 @@
       "triplet_margin": 0.0,
       "m": 0.9
     },
+    "triplet_only_dist_ema0.9_margin0.0": {
+      "display_name": "CE + Triplet Only (EMA 0.9, Margin 0.0, Dist EMA)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.9,
+      "dist_ema": true
+    },
     "triplet_pole_intra": {
       "display_name": "CE + Triplet (Poles) + Intra-Pole Triplet",
       "loss_type": "triplet_pole_intra",

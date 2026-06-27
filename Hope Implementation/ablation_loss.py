@@ -31,6 +31,9 @@ def main():
         args.m = params.get('m', args.m)
         intra_margin = params.get('intra_margin', intra_margin)
         no_classifier = params.get('no_classifier', False)
+        dist_ema = params.get('dist_ema', False)
+    else:
+        dist_ema = False
 
     if args.target_loss is None:
         parser.error("--target_loss is required (or use --variant to load from config)")
@@ -75,6 +78,9 @@ def main():
     ]
     if no_classifier:
         cmd.append("--no_classifier")
+    
+    if dist_ema:
+        cmd.append("--dist_ema")
     
     if class_num == 4:
         cmd.extend(["--dataset", "all", "--group", "all"])

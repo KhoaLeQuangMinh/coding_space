@@ -214,15 +214,15 @@ class ResNet(nn.Module):
                         m1_c = dist_c.mean()
                         m2_c = (dist_c ** 2).mean()
                         
-                        s1_c = self.running_mean_dist[cls_id].item()
-                        if s1_c == 0.0:
+                        s1_c = self.running_mean_dist[cls_id]
+                        if s1_c.item() == 0.0:
                             # Cold-start initialization
                             self.running_mean_dist[cls_id] = m1_c
                             self.running_mean_sq_dist[cls_id] = m2_c
                             w_i = torch.ones_like(dist_c)
                         else:
                             # Z-score & Cauchy weights
-                            s2_c = self.running_mean_sq_dist[cls_id].item()
+                            s2_c = self.running_mean_sq_dist[cls_id]
                             std_c = torch.sqrt(torch.clamp(s2_c - s1_c ** 2, min=0.0) + 1e-6)
                             z_i = (dist_c - s1_c) / (std_c + 1e-6)
                             w_i = 1.0 / (1.0 + z_i ** 2)

@@ -7,6 +7,115 @@
       "triplet_margin": 0.3,
       "m": 0.9
     },
+    "triplet_only": {
+      "display_name": "CE + Triplet Only",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "triplet_only_margin0.3": {
+      "display_name": "CE + Triplet Only (Margin 0.3)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.9
+    },
+    "triplet_only_margin3.0": {
+      "display_name": "CE + Triplet Only (Margin 3.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 3.0,
+      "m": 0.9
+    },
+    "triplet_only_margin4.0": {
+      "display_name": "CE + Triplet Only (Margin 4.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 4.0,
+      "m": 0.9
+    },
+    "triplet_only_ema0.6_margin4.0": {
+      "display_name": "CE + Triplet Only (EMA 0.6, Margin 4.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 4.0,
+      "m": 0.6
+    },
+    "triplet_only_margin5.0": {
+      "display_name": "Triplet Only (Margin 5.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 5.0,
+      "m": 0.9
+    },
+    "triplet_only_ema0.5_margin0.0": {
+      "display_name": "CE + Triplet Only (EMA 0.5, Margin 0.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.5
+    },
+    "triplet_only_ema0.6_margin0.0": {
+      "display_name": "CE + Triplet Only (EMA 0.6, Margin 0.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.6
+    },
+    "triplet_only_ema0.7_margin0.0": {
+      "display_name": "CE + Triplet Only (EMA 0.7, Margin 0.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.7
+    },
+    "triplet_only_ema0.8_margin0.0": {
+      "display_name": "CE + Triplet Only (EMA 0.8, Margin 0.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.8
+    },
+    "triplet_only_ema0.5_margin5.0": {
+      "display_name": "CE + Triplet Only (EMA 0.5, Margin 5.0)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 5.0,
+      "m": 0.5,
+      "no_classifier": false
+    },
+    "triplet_only_dist_ema0.9_margin0.0": {
+      "display_name": "CE + Triplet Only (EMA 0.9, Margin 0.0, Dist EMA)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.9,
+      "dist_ema": true
+    },
+    "triplet_only_sigreg_margin0.0": {
+      "display_name": "CE + Triplet Only + SigREG (Margin 0.0)",
+      "loss_type": "triplet_only_sigreg",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.9
+    },
+    "triplet_only_margin3.0_proto": {
+      "display_name": "CE + Triplet Only (Margin 3.0, Prototype Clf)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 3.0,
+      "m": 0.9,
+      "no_classifier": true
+    },
+    "triplet_only_margin3.0_collinear": {
+      "display_name": "CE + Triplet Only (Margin 3.0, Collinear)",
+      "loss_type": "triplet_only_collinear",
+      "num_classes": 3,
+      "triplet_margin": 3.0,
+      "m": 0.9,
+      "no_classifier": false
+    },
     "ins2ins": {
       "display_name": "L_CE + L_Ins2Ins",
       "loss_type": "ins2ins",
@@ -48,34 +157,6 @@
       "num_classes": 3,
       "triplet_margin": 0.3,
       "m": 0.9
-    },
-    "triplet_only": {
-      "display_name": "CE + Triplet Only",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 0.3,
-      "m": 0.9
-    },
-    "triplet_only_margin0.3": {
-      "display_name": "CE + Triplet Only (Margin 0.3)",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 0.3,
-      "m": 0.9
-    },
-    "triplet_only_margin3.0": {
-      "display_name": "CE + Triplet Only (Margin 3.0)",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 3.0,
-      "m": 0.9
-    },
-    "triplet_only_ema0.5_margin0.0": {
-      "display_name": "CE + Triplet Only (EMA 0.5, Margin 0.0)",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 0.0,
-      "m": 0.5
     },
     "hierarchical_triplet_only": {
       "display_name": "CE + Hierarchical Triplet Only",
@@ -161,6 +242,13 @@
       "triplet_margin": 0.0,
       "m": 0.9
     },
+    "3pole_local_only_ema0.5_margin5.0": {
+      "display_name": "CE + 3-Pole Triplet (Local) Only (EMA 0.5, Margin 5.0)",
+      "loss_type": "3pole_local_only",
+      "num_classes": 3,
+      "triplet_margin": 5.0,
+      "m": 0.5
+    },
     "ema_None": {
       "display_name": "No EMA (σ = 0)",
       "loss_type": "full",
@@ -202,87 +290,6 @@
       "num_classes": 3,
       "triplet_margin": 0.3,
       "m": 0.999
-    },
-    "triplet_only_margin5.0": {
-      "display_name": "Triplet Only (Margin 5.0)",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 5.0,
-      "m": 0.9
-    },
-    "triplet_only_margin3.0_proto": {
-      "display_name": "CE + Triplet Only (Margin 3.0, Prototype Clf)",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 3.0,
-      "m": 0.9,
-      "no_classifier": true
-    },
-    "triplet_only_margin3.0_collinear": {
-      "display_name": "CE + Triplet Only (Margin 3.0, Collinear)",
-      "loss_type": "triplet_only_collinear",
-      "num_classes": 3,
-      "triplet_margin": 3.0,
-      "m": 0.9,
-      "no_classifier": false
-    },
-    "triplet_only_ema0.5_margin5.0": {
-    "display_name": "CE + Triplet Only (EMA 0.5, Margin 5.0)",
-    "loss_type": "triplet_only",
-    "num_classes": 3,
-    "triplet_margin": 5.0,
-    "m": 0.5,
-    "no_classifier": false
-    },
-    "3pole_local_only_ema0.5_margin5.0": {
-      "display_name": "CE + 3-Pole Triplet (Local) Only (EMA 0.5, Margin 5.0)",
-      "loss_type": "3pole_local_only",
-      "num_classes": 3,
-      "triplet_margin": 5.0,
-      "m": 0.5
-    },
-    "triplet_only_ema0.8_margin0.0": {
-      "display_name": "CE + Triplet Only (EMA 0.8, Margin 0.0)",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 0.0,
-      "m": 0.8
-    },
-    "triplet_only_margin4.0": {
-      "display_name": "CE + Triplet Only (Margin 4.0)",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 4.0,
-      "m": 0.9
-    },
-    "triplet_only_ema0.6_margin0.0": {
-      "display_name": "CE + Triplet Only (EMA 0.6, Margin 0.0)",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 0.0,
-      "m": 0.6
-    },
-    "triplet_only_ema0.7_margin0.0": {
-      "display_name": "CE + Triplet Only (EMA 0.7, Margin 0.0)",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 0.0,
-      "m": 0.7
-    },
-    "triplet_only_sigreg_margin0.0": {
-      "display_name": "CE + Triplet Only + SigREG (Margin 0.0)",
-      "loss_type": "triplet_only_sigreg",
-      "num_classes": 3,
-      "triplet_margin": 0.0,
-      "m": 0.9
-    },
-    "triplet_only_dist_ema0.9_margin0.0": {
-      "display_name": "CE + Triplet Only (EMA 0.9, Margin 0.0, Dist EMA)",
-      "loss_type": "triplet_only",
-      "num_classes": 3,
-      "triplet_margin": 0.0,
-      "m": 0.9,
-      "dist_ema": true
     },
     "triplet_pole_intra": {
       "display_name": "CE + Triplet (Poles) + Intra-Pole Triplet",
@@ -346,6 +353,32 @@
       "num_classes": 3,
       "triplet_margin": 3.0,
       "intra_margin": 1.5,
+      "m": 0.9,
+      "dist_ema": true
+    },
+    "triplet_pole_intra_dist_inter1.0_intra0.3": {
+      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet (Inter 1.0, Intra 0.3)",
+      "loss_type": "triplet_pole_intra_dist",
+      "num_classes": 3,
+      "triplet_margin": 1.0,
+      "intra_margin": 0.3,
+      "m": 0.9,
+      "dist_ema": true
+    },
+    "triplet_pole_intra_dist_inter1.5_intra0.5": {
+      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet (Inter 1.5, Intra 0.5)",
+      "loss_type": "triplet_pole_intra_dist",
+      "num_classes": 3,
+      "triplet_margin": 1.5,
+      "intra_margin": 0.5,
+      "m": 0.9
+    },
+    "triplet_pole_intra_dist_inter1.5_intra0.5_dist_ema": {
+      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet (Inter 1.5, Intra 0.5, Dist EMA)",
+      "loss_type": "triplet_pole_intra_dist",
+      "num_classes": 3,
+      "triplet_margin": 1.5,
+      "intra_margin": 0.5,
       "m": 0.9,
       "dist_ema": true
     }

@@ -10,6 +10,11 @@ class BasicComputing(nn.Module):
         self.margin = margin
         self.m = m
         self.intra_margin = intra_margin
+        
+        # Register buffers for running statistics of distances to prototypes (EMA stats)
+        # Note: class_num represents the number of classes (typically 3)
+        self.register_buffer("running_mean_dist", torch.zeros(class_num))
+        self.register_buffer("running_mean_sq_dist", torch.zeros(class_num))
 
     # compute current prototype
     def compute_mean(self, x):
@@ -144,6 +149,68 @@ class BasicComputing(nn.Module):
             
         return loss
 
+    def compute_intra_pole_loss_distributional(self, features, labels_4c, global_protos, k=None):
+        if labels_4c is None or global_protos is None or global_protos.shape[0] < self.class_num:
+            return torch.tensor(0.0, device=features.device)
+        if k is None:
+            k = self.intra_margin
+            
+        loss = torch.tensor(0.0, device=features.device)
+        
+        idx_cn = torch.nonzero(labels_4c == 0).reshape(-1)
+        idx_smci = torch.nonzero(labels_4c == 1).reshape(-1)
+        idx_pmci = torch.nonzero(labels_4c == 2).reshape(-1)
+        idx_ad = torch.nonzero(labels_4c == 3).reshape(-1)
+        
+        # 1. Update running stats for CN and calculate sMCI separation loss
+        if idx_cn.numel() > 0:
+            dist_cn = torch.sum((features.index_select(0, idx_cn).detach() - global_protos[0]) ** 2, dim=1)
+            m1_cn = dist_cn.mean()
+            m2_cn = (dist_cn ** 2).mean()
+            if self.running_mean_dist[0].item() == 0.0:
+                self.running_mean_dist[0] = m1_cn
+                self.running_mean_sq_dist[0] = m2_cn
+            else:
+                self.running_mean_dist[0] = self.running_mean_dist[0] * self.m + (1.0 - self.m) * m1_cn
+                self.running_mean_sq_dist[0] = self.running_mean_sq_dist[0] * self.m + (1.0 - self.m) * m2_cn
+                
+        s1_cn = self.running_mean_dist[0]
+        s2_cn = self.running_mean_sq_dist[0]
+        var_cn = torch.clamp(s2_cn - s1_cn ** 2, min=0.0)
+        std_cn = torch.sqrt(var_cn + 1e-6)
+        threshold_cn = s1_cn + k * std_cn
+        
+        if idx_smci.numel() > 0:
+            dist_smci = torch.sum((features.index_select(0, idx_smci) - global_protos[0]) ** 2, dim=1)
+            loss_smci = torch.nn.functional.relu(threshold_cn - dist_smci)
+            loss += loss_smci.mean()
+            
+        # 2. Update running stats for AD and calculate pMCI separation loss
+        proto_ad = global_protos[self.class_num - 1]
+        if idx_ad.numel() > 0:
+            dist_ad = torch.sum((features.index_select(0, idx_ad).detach() - proto_ad) ** 2, dim=1)
+            m1_ad = dist_ad.mean()
+            m2_ad = (dist_ad ** 2).mean()
+            if self.running_mean_dist[self.class_num - 1].item() == 0.0:
+                self.running_mean_dist[self.class_num - 1] = m1_ad
+                self.running_mean_sq_dist[self.class_num - 1] = m2_ad
+            else:
+                self.running_mean_dist[self.class_num - 1] = self.running_mean_dist[self.class_num - 1] * self.m + (1.0 - self.m) * m1_ad
+                self.running_mean_sq_dist[self.class_num - 1] = self.running_mean_sq_dist[self.class_num - 1] * self.m + (1.0 - self.m) * m2_ad
+                
+        s1_ad = self.running_mean_dist[self.class_num - 1]
+        s2_ad = self.running_mean_sq_dist[self.class_num - 1]
+        var_ad = torch.clamp(s2_ad - s1_ad ** 2, min=0.0)
+        std_ad = torch.sqrt(var_ad + 1e-6)
+        threshold_ad = s1_ad + k * std_ad
+        
+        if idx_pmci.numel() > 0:
+            dist_pmci = torch.sum((features.index_select(0, idx_pmci) - proto_ad) ** 2, dim=1)
+            loss_pmci = torch.nn.functional.relu(threshold_ad - dist_pmci)
+            loss += loss_pmci.mean()
+            
+        return loss
+
     def __call__(self, features, labels, labels_4c=None, global_protos=None):
         compactness_losslist = []
         separation_losslist = []
@@ -227,5 +294,8 @@ class BasicComputing(nn.Module):
 
         # Compute Intra-Pole Triplet Loss
         intra_pole_loss = self.compute_intra_pole_loss(features, labels_4c, global_protos)
+        
+        # Compute Distributional Running-Stats Asymmetric Intra-Pole Loss
+        intra_pole_loss_dist = self.compute_intra_pole_loss_distributional(features, labels_4c, global_protos)
 
-        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime, intra_pole_loss
+        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime, intra_pole_loss, intra_pole_loss_dist

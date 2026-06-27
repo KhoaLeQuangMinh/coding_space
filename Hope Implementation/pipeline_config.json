@@ -339,6 +339,15 @@
       "triplet_margin": 0.0,
       "intra_margin": 1.0,
       "m": 0.9
+    },
+    "triplet_pole_intra_dist_inter3.0_intra1.5": {
+      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet (Inter 3.0, Intra 1.5)",
+      "loss_type": "triplet_pole_intra_dist",
+      "num_classes": 3,
+      "triplet_margin": 3.0,
+      "intra_margin": 1.5,
+      "m": 0.9,
+      "dist_ema": true
     }
   },
   "checkpoints": [

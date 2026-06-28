@@ -121,6 +121,34 @@
       "triplet_margin": 5.0,
       "m": 0.9
     },
+    "triplet_only_global_ema0.5_margin0.0": {
+      "display_name": "CE + Triplet Only Global (EMA 0.5, Margin 0.0)",
+      "loss_type": "triplet_only_global",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.5
+    },
+    "triplet_only_global_ema0.6_margin0.0": {
+      "display_name": "CE + Triplet Only Global (EMA 0.6, Margin 0.0)",
+      "loss_type": "triplet_only_global",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.6
+    },
+    "triplet_only_global_ema0.7_margin0.0": {
+      "display_name": "CE + Triplet Only Global (EMA 0.7, Margin 0.0)",
+      "loss_type": "triplet_only_global",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.7
+    },
+    "triplet_only_global_ema0.8_margin0.0": {
+      "display_name": "CE + Triplet Only Global (EMA 0.8, Margin 0.0)",
+      "loss_type": "triplet_only_global",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.8
+    },
     "triplet_only_sigreg_margin0.0": {
       "display_name": "CE + Triplet Only + SigREG (Margin 0.0)",
       "loss_type": "triplet_only_sigreg",

@@ -298,4 +298,24 @@ class BasicComputing(nn.Module):
         # Compute Distributional Running-Stats Asymmetric Intra-Pole Loss
         intra_pole_loss_dist = self.compute_intra_pole_loss_distributional(features, labels_4c, global_protos)
 
-        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime, intra_pole_loss, intra_pole_loss_dist
+        # EXPERIMENTAL 6: Global Prototype Anchored Triplet Loss
+        triplet_ins2cls_global = torch.tensor(0.0, device=features.device)
+        if labels_4c is not None and global_protos is not None and global_protos.shape[0] >= self.class_num:
+            mean_cn = global_protos[0].unsqueeze(0)
+            mean_ad = global_protos[self.class_num - 1].unsqueeze(0)
+            
+            # Left side: CN (0) and sMCI (1) -> Target CN, Opp AD
+            idx_left = torch.nonzero((labels_4c == 0) | (labels_4c == 1)).reshape(-1)
+            if idx_left.numel() > 0:
+                x_left = features.index_select(0, idx_left)
+                loss_left = self.compute_relative_loss(x_left, target_mean=mean_cn, opp_mean=mean_ad)
+                triplet_ins2cls_global += loss_left
+                
+            # Right side: pMCI (2) and AD (3) -> Target AD, Opp CN
+            idx_right = torch.nonzero((labels_4c == 2) | (labels_4c == 3)).reshape(-1)
+            if idx_right.numel() > 0:
+                x_right = features.index_select(0, idx_right)
+                loss_right = self.compute_relative_loss(x_right, target_mean=mean_ad, opp_mean=mean_cn)
+                triplet_ins2cls_global += loss_right
+
+        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime, intra_pole_loss, intra_pole_loss_dist, triplet_ins2cls_global

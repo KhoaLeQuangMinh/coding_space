@@ -468,6 +468,40 @@
       "intra_margin": 0.5,
       "m": 0.9,
       "dist_ema": true
+    },
+    "triplet_pole_intra_dist_global_inter3.0_intra1.5": {
+      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet (Inter 3.0, Intra 1.5)",
+      "loss_type": "triplet_pole_intra_dist_global",
+      "num_classes": 3,
+      "triplet_margin": 3.0,
+      "intra_margin": 1.5,
+      "m": 0.9
+    },
+    "triplet_pole_intra_dist_global_inter1.0_intra0.3": {
+      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet (Inter 1.0, Intra 0.3)",
+      "loss_type": "triplet_pole_intra_dist_global",
+      "num_classes": 3,
+      "triplet_margin": 1.0,
+      "intra_margin": 0.3,
+      "m": 0.9
+    },
+    "triplet_pole_intra_dist_global_inter3.0_intra1.5_dist_ema": {
+      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet (Inter 3.0, Intra 1.5, Dist EMA)",
+      "loss_type": "triplet_pole_intra_dist_global",
+      "num_classes": 3,
+      "triplet_margin": 3.0,
+      "intra_margin": 1.5,
+      "m": 0.9,
+      "dist_ema": true
+    },
+    "triplet_pole_intra_dist_global_inter1.0_intra0.3_dist_ema": {
+      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet (Inter 1.0, Intra 0.3, Dist EMA)",
+      "loss_type": "triplet_pole_intra_dist_global",
+      "num_classes": 3,
+      "triplet_margin": 1.0,
+      "intra_margin": 0.3,
+      "m": 0.9,
+      "dist_ema": true
     }
   },
   "checkpoints": [

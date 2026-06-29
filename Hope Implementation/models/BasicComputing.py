@@ -3,13 +3,14 @@ import torch.nn as nn
 
 
 class BasicComputing(nn.Module):
-    def __init__(self, class_num, gpu_ids=None, dim=512, margin=0.0, m=0.9, intra_margin=0.15):
+    def __init__(self, class_num, gpu_ids=None, dim=512, margin=0.0, m=0.9, intra_margin=0.15, pole_sep_margin=3.5):
         super(BasicComputing, self).__init__()
         self.dim = dim
         self.class_num = class_num
         self.margin = margin
         self.m = m
         self.intra_margin = intra_margin
+        self.pole_sep_margin = pole_sep_margin
         
         # Register buffers for running statistics of distances to prototypes (EMA stats)
         # Note: class_num represents the number of classes (typically 3)
@@ -211,6 +212,33 @@ class BasicComputing(nn.Module):
             
         return loss
 
+    def compute_pole_sep_loss(self, features, labels_4c, global_protos, margin=None):
+        if labels_4c is None or global_protos is None or global_protos.shape[0] < self.class_num:
+            return torch.tensor(0.0, device=features.device)
+        if margin is None:
+            margin = self.pole_sep_margin
+            
+        loss = torch.tensor(0.0, device=features.device)
+        
+        idx_cn = torch.nonzero(labels_4c == 0).reshape(-1)
+        idx_ad = torch.nonzero(labels_4c == 3).reshape(-1)
+        
+        # 1. CN features pushed away from AD global prototype
+        if idx_cn.numel() > 0:
+            proto_ad = global_protos[self.class_num - 1]
+            dist_cn_to_ad = torch.sum((features.index_select(0, idx_cn) - proto_ad) ** 2, dim=1)
+            loss_cn = torch.nn.functional.relu(margin - dist_cn_to_ad)
+            loss += loss_cn.mean()
+            
+        # 2. AD features pushed away from CN global prototype
+        if idx_ad.numel() > 0:
+            proto_cn = global_protos[0]
+            dist_ad_to_cn = torch.sum((features.index_select(0, idx_ad) - proto_cn) ** 2, dim=1)
+            loss_ad = torch.nn.functional.relu(margin - dist_ad_to_cn)
+            loss += loss_ad.mean()
+            
+        return loss
+
     def __call__(self, features, labels, labels_4c=None, global_protos=None):
         compactness_losslist = []
         separation_losslist = []
@@ -318,4 +346,7 @@ class BasicComputing(nn.Module):
                 loss_right = self.compute_relative_loss(x_right, target_mean=mean_ad, opp_mean=mean_cn)
                 triplet_ins2cls_global += loss_right
 
-        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime, intra_pole_loss, intra_pole_loss_dist, triplet_ins2cls_global
+        # EXPERIMENTAL 7: Absolute Pole Separation Loss
+        pole_sep_loss = self.compute_pole_sep_loss(features, labels_4c, global_protos)
+
+        return compactness_loss, separation_loss, stacked_means, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime, intra_pole_loss, intra_pole_loss_dist, triplet_ins2cls_global, pole_sep_loss

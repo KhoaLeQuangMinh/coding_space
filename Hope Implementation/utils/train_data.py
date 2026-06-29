@@ -100,7 +100,7 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             features, outputs, _ = model.forward(images)
 
             # basic computing
-            compactness_loss, separation_loss, mus, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime, intra_pole_loss, intra_pole_loss_dist, triplet_ins2cls_global = basiccomputing(features, labels, labels_4c, global_protos)
+            compactness_loss, separation_loss, mus, triplet_ins2cls, hierarchical_triplet_ins2cls, three_pole_local, three_pole_global, collinear_loss, P_prime, intra_pole_loss, intra_pole_loss_dist, triplet_ins2cls_global, pole_sep_loss = basiccomputing(features, labels, labels_4c, global_protos)
 
             # CE loss
             loss_CE = criterion(outputs, labels)
@@ -153,6 +153,8 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
                 loss_hyb = (triplet_ins2cls / features.shape[1]) + (intra_pole_loss_dist / features.shape[1])
             elif ablation_loss == 'triplet_pole_intra_dist_global':
                 loss_hyb = (triplet_ins2cls_global / features.shape[1]) + (intra_pole_loss_dist / features.shape[1])
+            elif ablation_loss == 'triplet_pole_intra_dist_global_sep':
+                loss_hyb = (triplet_ins2cls_global / features.shape[1]) + (intra_pole_loss_dist / features.shape[1]) + (pole_sep_loss / features.shape[1])
             elif ablation_loss == 'exp_hierarchical_triplet_ins2cls':
                 loss_hyb = loss_ins2ins + (hierarchical_triplet_ins2cls / features.shape[1]) + loss_cls2cls
             elif ablation_loss == 'exp_3pole_local':
@@ -195,13 +197,15 @@ def train_data(model, total_cn_loader, total_ad_loader, total_mci_loader,
             if ablation_loss == 'triplet_only_sigreg' and sigreg_module is not None:
                 train_loss_sigreg += sigreg_loss.item()
                 
-            if ablation_loss in ['exp_triplet_ins2cls', 'triplet_only', 'triplet_only_collinear', 'triplet_only_sigreg', 'triplet_pole_intra', 'triplet_pole_intra_dist', 'triplet_only_global', 'triplet_pole_intra_dist_global']:
+            if ablation_loss in ['exp_triplet_ins2cls', 'triplet_only', 'triplet_only_collinear', 'triplet_only_sigreg', 'triplet_pole_intra', 'triplet_pole_intra_dist', 'triplet_only_global', 'triplet_pole_intra_dist_global', 'triplet_pole_intra_dist_global_sep']:
                 if ablation_loss == 'triplet_pole_intra':
                     train_loss_ins2cls += ((triplet_ins2cls + intra_pole_loss) / features.shape[1]).item()
                 elif ablation_loss == 'triplet_pole_intra_dist':
                     train_loss_ins2cls += ((triplet_ins2cls + intra_pole_loss_dist) / features.shape[1]).item()
                 elif ablation_loss == 'triplet_pole_intra_dist_global':
                     train_loss_ins2cls += ((triplet_ins2cls_global + intra_pole_loss_dist) / features.shape[1]).item()
+                elif ablation_loss == 'triplet_pole_intra_dist_global_sep':
+                    train_loss_ins2cls += ((triplet_ins2cls_global + intra_pole_loss_dist + pole_sep_loss) / features.shape[1]).item()
                 elif ablation_loss == 'triplet_only_global':
                     train_loss_ins2cls += (triplet_ins2cls_global / features.shape[1]).item()
                 else:

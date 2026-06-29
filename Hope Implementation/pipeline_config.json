@@ -337,42 +337,42 @@
       "m": 0.5
     },
     "ema_None": {
-      "display_name": "No EMA (σ = 0)",
+      "display_name": "No EMA (\u03c3 = 0)",
       "loss_type": "full",
       "num_classes": 3,
       "triplet_margin": 0.3,
       "m": 1.0
     },
     "ema_0.5": {
-      "display_name": "EMA σ = 0.5",
+      "display_name": "EMA \u03c3 = 0.5",
       "loss_type": "full",
       "num_classes": 3,
       "triplet_margin": 0.3,
       "m": 0.5
     },
     "ema_0.8": {
-      "display_name": "EMA σ = 0.8",
+      "display_name": "EMA \u03c3 = 0.8",
       "loss_type": "full",
       "num_classes": 3,
       "triplet_margin": 0.3,
       "m": 0.8
     },
     "ema_0.9": {
-      "display_name": "EMA σ = 0.9 ★",
+      "display_name": "EMA \u03c3 = 0.9 \u2605",
       "loss_type": "full",
       "num_classes": 3,
       "triplet_margin": 0.3,
       "m": 0.9
     },
     "ema_0.99": {
-      "display_name": "EMA σ = 0.99",
+      "display_name": "EMA \u03c3 = 0.99",
       "loss_type": "full",
       "num_classes": 3,
       "triplet_margin": 0.3,
       "m": 0.99
     },
     "ema_0.999": {
-      "display_name": "EMA σ = 0.999",
+      "display_name": "EMA \u03c3 = 0.999",
       "loss_type": "full",
       "num_classes": 3,
       "triplet_margin": 0.3,
@@ -426,120 +426,39 @@
       "intra_margin": 1.5,
       "m": 0.6
     },
-    "triplet_pole_intra_dist": {
-      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet",
+    "triplet_pole_intra_dist_inter0.0_intra3.0": {
+      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet (Inter 0.0, Intra 3.0)",
       "loss_type": "triplet_pole_intra_dist",
       "num_classes": 3,
       "triplet_margin": 0.0,
-      "intra_margin": 1.0,
+      "intra_margin": 3.0,
       "m": 0.9
     },
-    "triplet_pole_intra_dist_inter3.0_intra1.5": {
-      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet (Inter 3.0, Intra 1.5)",
-      "loss_type": "triplet_pole_intra_dist",
+    "triplet_pole_intra_dist_global_inter0.0_intra3.0": {
+      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet (Inter 0.0, Intra 3.0)",
+      "loss_type": "triplet_pole_intra_dist_global",
       "num_classes": 3,
-      "triplet_margin": 3.0,
-      "intra_margin": 1.5,
-      "m": 0.9,
-      "dist_ema": true
-    },
-    "triplet_pole_intra_dist_inter1.0_intra0.3": {
-      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet (Inter 1.0, Intra 0.3)",
-      "loss_type": "triplet_pole_intra_dist",
-      "num_classes": 3,
-      "triplet_margin": 1.0,
-      "intra_margin": 0.3,
-      "m": 0.9,
-      "dist_ema": true
-    },
-    "triplet_pole_intra_dist_inter1.5_intra0.5": {
-      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet (Inter 1.5, Intra 0.5)",
-      "loss_type": "triplet_pole_intra_dist",
-      "num_classes": 3,
-      "triplet_margin": 1.5,
-      "intra_margin": 0.5,
+      "triplet_margin": 0.0,
+      "intra_margin": 3.0,
       "m": 0.9
     },
-    "triplet_pole_intra_dist_inter1.5_intra0.5_dist_ema": {
-      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet (Inter 1.5, Intra 0.5, Dist EMA)",
-      "loss_type": "triplet_pole_intra_dist",
+    "triplet_pole_intra_dist_sep_inter0.0_intra3.0_sep3.5": {
+      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet + Abs Sep (Inter 0.0, Intra 3.0, Sep 3.5)",
+      "loss_type": "triplet_pole_intra_dist_sep",
       "num_classes": 3,
-      "triplet_margin": 1.5,
-      "intra_margin": 0.5,
-      "m": 0.9,
-      "dist_ema": true
-    },
-    "triplet_pole_intra_dist_global_inter3.0_intra1.5": {
-      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet (Inter 3.0, Intra 1.5)",
-      "loss_type": "triplet_pole_intra_dist_global",
-      "num_classes": 3,
-      "triplet_margin": 3.0,
-      "intra_margin": 1.5,
-      "m": 0.9
-    },
-    "triplet_pole_intra_dist_global_inter1.0_intra0.3": {
-      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet (Inter 1.0, Intra 0.3)",
-      "loss_type": "triplet_pole_intra_dist_global",
-      "num_classes": 3,
-      "triplet_margin": 1.0,
-      "intra_margin": 0.3,
-      "m": 0.9
-    },
-    "triplet_pole_intra_dist_global_inter3.0_intra1.5_dist_ema": {
-      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet (Inter 3.0, Intra 1.5, Dist EMA)",
-      "loss_type": "triplet_pole_intra_dist_global",
-      "num_classes": 3,
-      "triplet_margin": 3.0,
-      "intra_margin": 1.5,
-      "m": 0.9,
-      "dist_ema": true
-    },
-    "triplet_pole_intra_dist_global_inter1.0_intra0.3_dist_ema": {
-      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet (Inter 1.0, Intra 0.3, Dist EMA)",
-      "loss_type": "triplet_pole_intra_dist_global",
-      "num_classes": 3,
-      "triplet_margin": 1.0,
-      "intra_margin": 0.3,
-      "m": 0.9,
-      "dist_ema": true
-    },
-    "triplet_pole_intra_dist_global_sep_inter3.0_intra1.5_sep3.5": {
-      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet + Abs Sep (Inter 3.0, Intra 1.5, Sep 3.5)",
-      "loss_type": "triplet_pole_intra_dist_global_sep",
-      "num_classes": 3,
-      "triplet_margin": 3.0,
-      "intra_margin": 1.5,
+      "triplet_margin": 0.0,
+      "intra_margin": 3.0,
       "pole_sep_margin": 3.5,
       "m": 0.9
     },
-    "triplet_pole_intra_dist_global_sep_inter1.0_intra0.3_sep3.5": {
-      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet + Abs Sep (Inter 1.0, Intra 0.3, Sep 3.5)",
+    "triplet_pole_intra_dist_global_sep_inter0.0_intra3.0_sep3.5": {
+      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet + Abs Sep (Inter 0.0, Intra 3.0, Sep 3.5)",
       "loss_type": "triplet_pole_intra_dist_global_sep",
       "num_classes": 3,
-      "triplet_margin": 1.0,
-      "intra_margin": 0.3,
+      "triplet_margin": 0.0,
+      "intra_margin": 3.0,
       "pole_sep_margin": 3.5,
       "m": 0.9
-    },
-    "triplet_pole_intra_dist_global_sep_inter3.0_intra1.5_sep3.5_dist_ema": {
-      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet + Abs Sep (Inter 3.0, Intra 1.5, Sep 3.5, Dist EMA)",
-      "loss_type": "triplet_pole_intra_dist_global_sep",
-      "num_classes": 3,
-      "triplet_margin": 3.0,
-      "intra_margin": 1.5,
-      "pole_sep_margin": 3.5,
-      "m": 0.9,
-      "dist_ema": true
-    },
-    "triplet_pole_intra_dist_global_sep_inter1.0_intra0.3_sep3.5_dist_ema": {
-      "display_name": "CE + Triplet Global (Poles) + Distributional Intra-Pole Triplet + Abs Sep (Inter 1.0, Intra 0.3, Sep 3.5, Dist EMA)",
-      "loss_type": "triplet_pole_intra_dist_global_sep",
-      "num_classes": 3,
-      "triplet_margin": 1.0,
-      "intra_margin": 0.3,
-      "pole_sep_margin": 3.5,
-      "m": 0.9,
-      "dist_ema": true
     }
   },
   "checkpoints": [

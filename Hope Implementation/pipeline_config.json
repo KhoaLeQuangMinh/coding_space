@@ -475,6 +475,14 @@
       "triplet_margin": 0.0,
       "pole_sep_margin": 3.5,
       "m": 0.9
+    },
+    "hope_original": {
+      "display_name": "HOPE Original (Paper Setup)",
+      "loss_type": "full",
+      "num_classes": 3,
+      "triplet_margin": 0.3,
+      "m": 0.999,
+      "batch_size": 8
     }
   },
   "checkpoints": [

@@ -16,12 +16,14 @@ def main():
     parser.add_argument('--variant', type=str, default=None, help='Variant key from pipeline_config.json (overrides manual args)')
     parser.add_argument('--config', type=str, default=None, help='Path to pipeline_config.json')
     parser.add_argument('--epoch_count', type=int, default=30, help='Number of training epochs')
+    parser.add_argument('--batch_size', type=int, default=None, help='Batch size for training')
     parser.add_argument('--gpu_ids', type=str, default='0', help='GPU IDs (e.g. 0, use empty string or -1 for CPU)')
     args = parser.parse_args()
 
     # Resolve variant from config if provided
     no_classifier = False
     intra_margin = 0.15
+    batch_size = 4
     if args.variant is not None:
         config = load_config(args.config)
         params = get_variant_params(args.variant, config)
@@ -32,8 +34,12 @@ def main():
         intra_margin = params.get('intra_margin', intra_margin)
         no_classifier = params.get('no_classifier', False)
         dist_ema = params.get('dist_ema', False)
+        batch_size = params.get('batch_size', batch_size)
     else:
         dist_ema = False
+
+    if args.batch_size is not None:
+        batch_size = args.batch_size
 
     if args.target_loss is None:
         parser.error("--target_loss is required (or use --variant to load from config)")
@@ -46,7 +52,7 @@ def main():
     print(f"Specific Fold Target: {args.specific_fold if args.specific_fold != -1 else 'ALL'}")
     
     print(f"\n{'='*50}")
-    print(f"RUNNING LOSS VARIANT: {loss_type.upper()} | CLASSES: {class_num}")
+    print(f"RUNNING LOSS VARIANT: {loss_type.upper()} | CLASSES: {class_num} | BATCH SIZE: {batch_size}")
     print(f"{'='*50}\n")
     
     if args.variant is not None:
@@ -71,6 +77,7 @@ def main():
         "--class_num", str(class_num),
         "--gpu_ids", args.gpu_ids,
         "--epoch_count", str(args.epoch_count),
+        "--batch_size", str(batch_size),
         "--checkpoints_dir", "./checkpoints",
         "--name", expr_name,
         "--triplet_margin", str(args.triplet_margin),

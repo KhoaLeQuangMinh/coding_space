@@ -483,6 +483,15 @@
       "triplet_margin": 0.3,
       "m": 0.999,
       "batch_size": 8
+    },
+    "triplet_pole_intra_dist_inter0.0_intra3.0_dist_ema": {
+      "display_name": "CE + Triplet (Poles) + Distributional Intra-Pole Triplet (Inter 0.0, Intra 3.0, Dist EMA)",
+      "loss_type": "triplet_pole_intra_dist",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "intra_margin": 3.0,
+      "m": 0.9,
+      "dist_ema": true
     }
   },
   "checkpoints": [

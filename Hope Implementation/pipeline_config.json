@@ -492,6 +492,15 @@
       "intra_margin": 3.0,
       "m": 0.9,
       "dist_ema": true
+    },
+    "triplet_pole_intra_triplet_inter0.0_intra0.0_dist_ema": {
+      "display_name": "CE + Triplet (Poles) + Intra-Pole Triplet (Inter 0.0, Intra 0.0, Dist EMA)",
+      "loss_type": "triplet_pole_intra",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "intra_margin": 0.0,
+      "m": 0.9,
+      "dist_ema": true
     }
   },
   "checkpoints": [

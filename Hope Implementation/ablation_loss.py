@@ -24,6 +24,7 @@ def main():
     no_classifier = False
     intra_margin = 0.15
     batch_size = 4
+    epoch_count_from_config = None
     if args.variant is not None:
         config = load_config(args.config)
         params = get_variant_params(args.variant, config)
@@ -35,11 +36,18 @@ def main():
         no_classifier = params.get('no_classifier', False)
         dist_ema = params.get('dist_ema', False)
         batch_size = params.get('batch_size', batch_size)
+        epoch_count_from_config = params.get('epoch_count', None)
     else:
         dist_ema = False
 
     if args.batch_size is not None:
         batch_size = args.batch_size
+
+    # CLI --epoch_count overrides config value; config overrides the script default of 30
+    if args.epoch_count != 30:  # user explicitly passed a value
+        pass  # keep args.epoch_count as-is
+    elif epoch_count_from_config is not None:
+        args.epoch_count = epoch_count_from_config
 
     if args.target_loss is None:
         parser.error("--target_loss is required (or use --variant to load from config)")

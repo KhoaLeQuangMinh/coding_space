@@ -501,6 +501,15 @@
       "intra_margin": 0.0,
       "m": 0.9,
       "dist_ema": true
+    },
+    "triplet_only_ema0.999_margin0.0_paper_setup": {
+      "display_name": "CE + Triplet Only Local (EMA 0.999, Margin 0.0, Paper Setup)",
+      "loss_type": "triplet_only",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "m": 0.999,
+      "batch_size": 8,
+      "epoch_count": 60
     }
   },
   "checkpoints": [

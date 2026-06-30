@@ -459,6 +459,22 @@
       "intra_margin": 3.0,
       "pole_sep_margin": 3.5,
       "m": 0.9
+    },
+    "triplet_only_sep_inter0.0_sep3.5": {
+      "display_name": "CE + Triplet (Poles) + Abs Sep (Inter 0.0, Sep 3.5)",
+      "loss_type": "triplet_only_sep",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "pole_sep_margin": 3.5,
+      "m": 0.9
+    },
+    "triplet_only_global_sep_inter0.0_sep3.5": {
+      "display_name": "CE + Triplet Global (Poles) + Abs Sep (Inter 0.0, Sep 3.5)",
+      "loss_type": "triplet_only_global_sep",
+      "num_classes": 3,
+      "triplet_margin": 0.0,
+      "pole_sep_margin": 3.5,
+      "m": 0.9
     }
   },
   "checkpoints": [

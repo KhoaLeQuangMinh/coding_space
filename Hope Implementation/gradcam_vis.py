@@ -211,12 +211,18 @@ def plot_misclassification_grid(records: list, save_path: str, num_classes: int)
 
 def main():
     parser = argparse.ArgumentParser(description='Grad-CAM brain visualization')
+    # ── Kaggle shortcut: set this to the dataset root and checkpoints_dir is auto-resolved
+    #    e.g. --kaggle_input /kaggle/input/notebooks/baygiokemmuoi/hope-original
+    #    resolves to:  <kaggle_input>/coding_space/Hope Implementation/checkpoints
+    parser.add_argument('--kaggle_input', type=str, default=None,
+                        help='Kaggle dataset root (auto-resolves checkpoints_dir and data_dir)')
     parser.add_argument('--variant',    type=str,  required=True,
                         help='Pipeline config variant key (e.g. hope_original)')
     parser.add_argument('--fold',       type=int,  default=1,
                         help='Which fold checkpoint to load (1-5)')
     parser.add_argument('--checkpoint', type=str,  default='best_4c_net',
                         choices=['best_2c_net', 'best_3c_net', 'best_4c_net'],
+                        # Note: extension is always .pth (Kaggle saves as .pth)
                         help='Checkpoint filename (without .pt)')
     parser.add_argument('--config',     type=str,  default='pipeline_config.json')
     parser.add_argument('--data_dir',   type=str,  default='../data')
@@ -228,6 +234,17 @@ def main():
     parser.add_argument('--only_wrong', action='store_true',
                         help='Only visualise misclassified samples')
     args = parser.parse_args()
+
+    # ── resolve Kaggle paths if --kaggle_input is given ─────────────────────
+    if args.kaggle_input is not None:
+        kaggle_root = args.kaggle_input.rstrip('/')
+        hope_impl   = os.path.join(kaggle_root, 'coding_space', 'Hope Implementation')
+        args.checkpoints_dir = os.path.join(hope_impl, 'checkpoints')
+        if args.data_dir == '../data':          # only override if still at default
+            args.data_dir = os.path.join(hope_impl, '..', 'data')
+        args.config = os.path.join(hope_impl, 'pipeline_config.json')
+        print(f"  [Kaggle] checkpoints_dir → {args.checkpoints_dir}")
+        print(f"  [Kaggle] config          → {args.config}")
 
     # ── load variant config ──────────────────────────────────────────────────
     config = load_config(args.config)
@@ -250,7 +267,7 @@ def main():
         args.checkpoints_dir,
         f"{expr_name}_fold{args.fold}"
     )
-    ckpt_path   = os.path.join(ckpt_folder, f"{args.checkpoint}.pt")
+    ckpt_path   = os.path.join(ckpt_folder, f"{args.checkpoint}.pth")
 
     if not os.path.exists(ckpt_path):
         print(f"[ERROR] Checkpoint not found:\n  {ckpt_path}")

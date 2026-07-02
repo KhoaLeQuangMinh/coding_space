@@ -541,6 +541,25 @@
       "m": 0.999,
       "batch_size": 8,
       "epoch_count": 60
+    },
+    "triplet_only_4class_paper_setup": {
+      "display_name": "CE (4-class) + Triplet Only Local (EMA 0.999, Margin 0.0, Paper Setup)",
+      "loss_type": "triplet_only",
+      "num_classes": 4,
+      "triplet_margin": 0.0,
+      "m": 0.999,
+      "batch_size": 8,
+      "epoch_count": 60
+    },
+    "triplet_pole_intra_dist_4class_inter0.0_intra2.0_paper_setup": {
+      "display_name": "CE (4-class) + Triplet Local + Dist Intra-Pole (Inter 0.0, Std 2.0, Paper Setup)",
+      "loss_type": "triplet_pole_intra_dist",
+      "num_classes": 4,
+      "triplet_margin": 0.0,
+      "intra_margin": 2.0,
+      "m": 0.999,
+      "batch_size": 8,
+      "epoch_count": 60
     }
   },
   "checkpoints": [

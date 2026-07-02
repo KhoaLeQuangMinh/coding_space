@@ -331,8 +331,13 @@ def main():
     for idx in range(min(limit, len(test_dataset))):
         sample     = test_dataset[idx]
         mri_tensor = sample[0].unsqueeze(0).to(device)   # (1,1,D,H,W)
-        true_label_idx = sample[2].item() if (return_4c and len(sample) > 2) \
-                         else sample[1].item()
+
+        # Labels can be plain Python ints or tensors depending on Dataset version
+        def _to_int(x):
+            return x.item() if hasattr(x, 'item') else int(x)
+
+        true_label_idx = _to_int(sample[2]) if (return_4c and len(sample) > 2) \
+                         else _to_int(sample[1])
 
         true_str = label_map.get(true_label_idx, str(true_label_idx))
 

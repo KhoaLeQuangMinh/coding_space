@@ -240,11 +240,14 @@ def main():
         kaggle_root = args.kaggle_input.rstrip('/')
         hope_impl   = os.path.join(kaggle_root, 'coding_space', 'Hope Implementation')
         args.checkpoints_dir = os.path.join(hope_impl, 'checkpoints')
-        if args.data_dir == '../data':          # only override if still at default
-            args.data_dir = os.path.join(hope_impl, '..', 'data')
         args.config = os.path.join(hope_impl, 'pipeline_config.json')
         print(f"  [Kaggle] checkpoints_dir → {args.checkpoints_dir}")
         print(f"  [Kaggle] config          → {args.config}")
+        print(f"  [Kaggle] data_dir        → {args.data_dir}  (set via --data_dir)")
+        if args.data_dir == '../data':
+            print("\n  [WARNING] --data_dir is still the default '../data'.")
+            print("  Pass --data_dir with the actual path to your NPZ files on Kaggle,")
+            print("  e.g.  --data_dir /kaggle/working/coding_space/data\n")
 
     # ── load variant config ──────────────────────────────────────────────────
     config = load_config(args.config)

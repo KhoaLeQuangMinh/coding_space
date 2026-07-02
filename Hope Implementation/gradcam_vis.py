@@ -293,13 +293,22 @@ def main():
 
     state_dict = torch.load(ckpt_path, map_location=device)
     # strip DataParallel prefix if present
-    state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
+    state_dict_clean = {k.replace('module.', ''): v for k, v in state_dict.items()}
     if hasattr(model, 'module'):
-        model.module.load_state_dict(state_dict, strict=False)
+        model.module.load_state_dict(state_dict_clean, strict=False)
         inner = model.module
     else:
-        model.load_state_dict(state_dict, strict=False)
+        model.load_state_dict(state_dict_clean, strict=False)
         inner = model
+        
+    # Explicitly load saved running prototypes (crucial for sMCI vs pMCI split)
+    if 'prototypes' in state_dict:
+        proto_tensor = state_dict['prototypes'].to(device)
+        inner.prototypes = torch.nn.Parameter(proto_tensor, requires_grad=False)
+        if hasattr(model, 'module'):
+            model.module.prototypes = torch.nn.Parameter(proto_tensor, requires_grad=False)
+        print("  Explicitly loaded saved prototypes from state_dict")
+        
     model.eval()
     print(f"  Model loaded on {device}")
 

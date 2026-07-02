@@ -310,10 +310,13 @@ def main():
 
     # ── load validation / test dataset ──────────────────────────────────────
     return_4c = (num_classes == 4)
-    test_dataset = Dataset(mode='valid', data_dir=args.data_dir,
+    # Use mode='test' — the held-out KFold split (~20%, ~120 subjects)
+    # This is exactly the same split used by test.py to generate the confusion matrix.
+    # mode='valid' is only the ~10% validation set used during training for checkpointing.
+    test_dataset = Dataset(mode='test', data_dir=args.data_dir,
                            seed=42, kfold=5, current_fold=args.fold,
                            return_4c=return_4c)
-    print(f"  Test samples: {len(test_dataset)}\n")
+    print(f"  Test samples (held-out fold): {len(test_dataset)}\n")
 
     label_map = LABEL_MAP_4C if num_classes == 4 else LABEL_MAP_3C
 

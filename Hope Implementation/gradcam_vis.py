@@ -360,12 +360,28 @@ def main():
 
         # ── forward to get prediction ────────────────────────────────────────
         with torch.no_grad():
-            _, logits, _ = model(mri_tensor)   # pos[1] = main classifier (num_classes)
+            _, logits, spmci_prob = model(mri_tensor)
             pred_idx = logits.argmax(dim=1).item()
-        pred_str = LABEL_MAP_4C.get(pred_idx, str(pred_idx)) if num_classes == 4 \
-                   else LABEL_MAP_3C.get(pred_idx, str(pred_idx))
 
-        correct  = (pred_idx == true_for_compare)
+        # If model is 3-class, resolve MCI prediction into sMCI or pMCI using prototypes
+        if num_classes == 3:
+            if pred_idx == 0:
+                final_pred_4c = 0   # CN
+            elif pred_idx == 2:
+                final_pred_4c = 3   # AD
+            else: # pred_idx == 1 (MCI)
+                # spmci_prob has shape (1, 2) corresponding to [sMCI, pMCI]
+                s = spmci_prob.argmax(dim=1).item()
+                final_pred_4c = 1 if s == 0 else 2
+        else: # num_classes == 4
+            final_pred_4c = pred_idx
+
+        # Both true_str and pred_str are now always in the 4-class label space
+        true_str = LABEL_MAP_4C.get(true_label_4c, str(true_label_4c))
+        pred_str = LABEL_MAP_4C.get(final_pred_4c, str(final_pred_4c))
+
+        # Correctness is determined by matching the 4-class labels exactly
+        correct = (final_pred_4c == true_label_4c)
         if correct:
             n_correct += 1
         else:
@@ -374,7 +390,7 @@ def main():
         if args.only_wrong and correct:
             continue
 
-        # ── compute Grad-CAM for predicted class ─────────────────────────────
+        # ── compute Grad-CAM for the main predicted class index ────────────────
         cam_vol = grad_cam(mri_tensor, class_idx=pred_idx)
         mri_vol = mri_tensor.squeeze().cpu().numpy()   # (D, H, W)
 
@@ -398,7 +414,7 @@ def main():
 
     # ── misclassification summary grid ──────────────────────────────────────
     grid_path = os.path.join(out_root, 'misclassification_grid.png')
-    plot_misclassification_grid(misclassified_records, grid_path, num_classes)
+    plot_misclassification_grid(misclassified_records, grid_path, 4)  # Always plot with 4-class maps
 
     # ── final stats ──────────────────────────────────────────────────────────
     total = n_correct + n_wrong

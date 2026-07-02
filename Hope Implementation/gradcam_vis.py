@@ -328,26 +328,38 @@ def main():
     n_correct = n_wrong = 0
     limit = args.max_samples if args.max_samples > 0 else len(test_dataset)
 
+    def _to_int(x):
+        """Handle both plain Python ints and PyTorch tensor labels."""
+        return x.item() if hasattr(x, 'item') else int(x)
+
     for idx in range(min(limit, len(test_dataset))):
         sample     = test_dataset[idx]
         mri_tensor = sample[0].unsqueeze(0).to(device)   # (1,1,D,H,W)
 
-        # Labels can be plain Python ints or tensors depending on Dataset version
-        def _to_int(x):
-            return x.item() if hasattr(x, 'item') else int(x)
+        # The valid dataset ALWAYS returns 4-class EVAL_MAP labels (0=CN,1=sMCI,2=pMCI,3=AD)
+        # regardless of return_4c — see Dataset.py EVAL_MAP
+        true_label_4c = _to_int(sample[2]) if (return_4c and len(sample) > 2) \
+                        else _to_int(sample[1])
 
-        true_label_idx = _to_int(sample[2]) if (return_4c and len(sample) > 2) \
-                         else _to_int(sample[1])
+        # For 3-class models: collapse 4-class truth to 3-class for correctness check
+        # (pred_idx is in 3-class space: 0=CN, 1=MCI, 2=AD)
+        if num_classes == 3:
+            true_for_compare = 0 if true_label_4c == 0 else (1 if true_label_4c in [1, 2] else 2)
+        else:
+            true_for_compare = true_label_4c
 
-        true_str = label_map.get(true_label_idx, str(true_label_idx))
+        # Always display the full 4-class name for clarity
+        true_str = LABEL_MAP_4C.get(true_label_4c, str(true_label_4c))
+        true_label_idx = true_label_4c  # keep for any downstream use
 
         # ── forward to get prediction ────────────────────────────────────────
         with torch.no_grad():
             _, _, logits = model(mri_tensor)
             pred_idx = logits.argmax(dim=1).item()
-        pred_str = label_map.get(pred_idx, str(pred_idx))
+        pred_str = LABEL_MAP_4C.get(pred_idx, str(pred_idx)) if num_classes == 4 \
+                   else LABEL_MAP_3C.get(pred_idx, str(pred_idx))
 
-        correct  = (pred_idx == true_label_idx)
+        correct  = (pred_idx == true_for_compare)
         if correct:
             n_correct += 1
         else:

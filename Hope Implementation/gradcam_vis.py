@@ -83,11 +83,14 @@ class GradCAM3D:
         """
         Returns a 3-D CAM volume (D, H, W) normalised to [0, 1],
         upsampled to match the original input spatial resolution.
+
+        Model forward returns: (x_ori [features], x [main logits], spmci_prob)
+        We use x (position [1]) — the main num_classes classifier logits.
         """
         self.model.eval()
         images = images.clone().requires_grad_(True)
 
-        _, _, logits = self.model(images)         # forward
+        _, logits, _ = self.model(images)         # forward — use main classifier (pos 1)
         self.model.zero_grad()
         score = logits[0, class_idx]
         score.backward()                          # backward
@@ -354,7 +357,7 @@ def main():
 
         # ── forward to get prediction ────────────────────────────────────────
         with torch.no_grad():
-            _, _, logits = model(mri_tensor)
+            _, logits, _ = model(mri_tensor)   # pos[1] = main classifier (num_classes)
             pred_idx = logits.argmax(dim=1).item()
         pred_str = LABEL_MAP_4C.get(pred_idx, str(pred_idx)) if num_classes == 4 \
                    else LABEL_MAP_3C.get(pred_idx, str(pred_idx))
